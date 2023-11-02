@@ -1,0 +1,6 @@
+{
+    "idf.adapterTargetName": "esp32",
+    "cmake.configureOnOpen": false,
+    "idf.flashType": "UART",
+    "idf.port": "/dev/ttyACM0"
+}
