@@ -2,5 +2,14 @@
     "idf.adapterTargetName": "esp32",
     "cmake.configureOnOpen": false,
     "idf.flashType": "UART",
-    "idf.port": "/dev/ttyACM0"
+    "idf.port": "/dev/ttyACM0",
+    "files.associations": {
+        "esp_timer.h": "c",
+        "esp_log.h": "c",
+        "touch.h": "c",
+        "esp_err.h": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c"
+    }
 }

@@ -7,13 +7,6 @@
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
-#define BYTES_TO_BITS(x) (x * 8)
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#define GET_HIGH_WORD(x) (((x) >> 16) & 0xFFFF)
-#define GET_LOW_WORD(x) ((x) & 0xFFFF)
-#define MAKE_BYTE(hi,lo) (((hi) << 4) | (lo))
-#define MAKE_WORD(hi,lo) (((hi) << 8) | (lo))
-
 /* TODO:
  * - deinit;
  * - entering sleep mode after refresh;
@@ -63,58 +56,58 @@ eink_err_t eink_init(eink_rotation_t rotation, eink_color_t color)
 
     /* Create HRDY IRQ semaphore */
     eink_ctx.hrdy_semaphore = xSemaphoreCreateBinary();
-    if (eink_ctx.hrdy_semaphore == NULL) {
+    if (unlikely(eink_ctx.hrdy_semaphore == NULL)) {
         return EINK_NO_MEMORY;
     }
 
     /* Allocate SPI buffer */
     eink_ctx.spi_buffer = heap_caps_malloc(EINK_SPI_MAX_TRANSFER_SIZE_BYTES, MALLOC_CAP_32BIT | MALLOC_CAP_DMA);
-    if (eink_ctx.spi_buffer == NULL) {
+    if (unlikely(eink_ctx.spi_buffer == NULL)) {
         vSemaphoreDelete(eink_ctx.hrdy_semaphore);
         return EINK_NO_MEMORY;
     }
     
     /* Initialize peripherals */
-    if (eink_gpio_config() != ESP_OK) {
+    if (unlikely(eink_gpio_config() != ESP_OK)) {
         return EINK_GPIO_ERROR;
     }
-    if (eink_spi_config() != ESP_OK) {
+    if (unlikely(eink_spi_config() != ESP_OK)) {
         return EINK_SPI_ERROR;
     }
 
     /* Turn on the controller, enable I80 pack write */
     eink_err_t err = eink_write_command(IT8951_TCON_SYS_RUN);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
     err = eink_write_register(IT8951_I80CPCR, 0x0001);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
 
     /* Set VCOM to -2.3V */
     err = eink_write_command(IT8951_I80_CMD_VCOM);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
     err = eink_write_word(0x0001); // Write operation
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
     err = eink_write_word(2300); // -2300mV
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
 
     /* Set internal controller RAM target memory address */
     err = eink_set_target_memory_address(EINK_TARGET_MEMORY_ADDRESS);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
 
     /* Clear the display */
     err = eink_clear();
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
 
@@ -151,7 +144,7 @@ eink_err_t eink_clear(void)
 {
     /* Set target memory address */
     eink_err_t err = eink_set_target_memory_address(EINK_TARGET_MEMORY_ADDRESS);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
 
@@ -169,7 +162,7 @@ eink_err_t eink_clear(void)
             err = EINK_INVALID_ARG;
             break;
     }
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
 
@@ -184,10 +177,10 @@ eink_err_t eink_clear(void)
 
         gpio_set_level(EINK_SPI_CS_PIN, EINK_LOW);
         const uint16_t preamble = IT8951_SPI_WRITE_DATA_PREAMBLE;
-        if (spi_transfer(&preamble, NULL, sizeof(preamble)) != ESP_OK) { // Send preamble
+        if (unlikely(spi_transfer(&preamble, NULL, sizeof(preamble)) != ESP_OK)) { // Send preamble
             return EINK_SPI_ERROR;
         }
-        if (spi_transfer(eink_ctx.spi_buffer, NULL, transfer_size) != ESP_OK) { // Send image data
+        if (unlikely(spi_transfer(eink_ctx.spi_buffer, NULL, transfer_size) != ESP_OK)) { // Send image data
             return EINK_SPI_ERROR;
         }
         gpio_set_level(EINK_SPI_CS_PIN, EINK_HIGH);
@@ -202,25 +195,25 @@ eink_err_t eink_clear(void)
 eink_err_t eink_write(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint8_t *px_map)
 {
     /* Sanity check */
-    if (px_map == NULL) {
+    if (unlikely(px_map == NULL)) {
         return EINK_INVALID_ARG;
     }
 
     /* Display requires 4 pixel horizontal alignment */
-    if (((x % 4) != 0) || ((w % 4) != 0)) {
+    if (unlikely((x % 4) != 0) || ((w % 4) != 0)) {
         ESP_LOGE("", "NOT ALIGNED!");
         return EINK_NOT_ALIGNED;
     }
 
     /* Set target memory address */
     eink_err_t err = eink_set_target_memory_address(EINK_TARGET_MEMORY_ADDRESS);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
 
     /* Set area */
     err = eink_set_area(x, y, w, h);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
 
@@ -242,10 +235,10 @@ eink_err_t eink_write(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint
         /* Write data */
         gpio_set_level(EINK_SPI_CS_PIN, EINK_LOW);
         const uint16_t preamble = IT8951_SPI_WRITE_DATA_PREAMBLE;
-        if (spi_transfer(&preamble, NULL, sizeof(preamble)) != ESP_OK) { // Send preamble
+        if (unlikely(spi_transfer(&preamble, NULL, sizeof(preamble)) != ESP_OK)) { // Send preamble
             return EINK_SPI_ERROR;
         }
-        if (spi_transfer(eink_ctx.spi_buffer, NULL, transfer_size) != ESP_OK) { // Send image data
+        if (unlikely(spi_transfer(eink_ctx.spi_buffer, NULL, transfer_size) != ESP_OK)) { // Send image data
             return EINK_SPI_ERROR;
         }
         gpio_set_level(EINK_SPI_CS_PIN, EINK_HIGH);
@@ -273,12 +266,12 @@ eink_err_t eink_write_full(const uint8_t *px_map)
 
 eink_err_t eink_refresh(uint16_t x, uint16_t y, uint16_t w, uint16_t h, eink_update_mode_t mode)
 {
-    if (mode == EINK_UPDATE_MODE_NONE) {
+    if (unlikely(mode == EINK_UPDATE_MODE_NONE)) {
         return EINK_INVALID_ARG;
     }
 
     /* Display requires 4 pixel horizontal alignment */
-    if (((x % 4) != 0) || ((w % 4) != 0)) {
+    if (unlikely((x % 4) != 0) || ((w % 4) != 0)) {
         return EINK_NOT_ALIGNED;
     }
 
@@ -318,7 +311,7 @@ eink_err_t eink_refresh(uint16_t x, uint16_t y, uint16_t w, uint16_t h, eink_upd
 
     /* Write to display */
     const eink_err_t err = eink_write_args(IT8951_I80_CMD_DPY_BUF_AREA, args, ARRAY_SIZE(args));
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
 
@@ -357,13 +350,13 @@ static esp_err_t spi_transfer(const void *tx_buffer, void *rx_buffer, size_t siz
 static esp_err_t spi_read16(uint16_t *data)
 {
     const esp_err_t err = spi_transfer(NULL, data, sizeof(*data));
-    *data = bswap16(*data); // ESP32 is little endian, IT8951 big endian
+    *data = __bswap16(*data); // ESP32 is little endian, IT8951 big endian
     return err;
 }
 
 static esp_err_t spi_write16(uint16_t data)
 {
-    data = bswap16(data);
+    data = __bswap16(data);
     return spi_transfer(&data, NULL, sizeof(data));
 }
 
@@ -379,15 +372,15 @@ static esp_err_t eink_gpio_config(void)
     };
 
     esp_err_t err = gpio_config(&gpio_cfg);
-    if (err) {
+    if (unlikely(err != ESP_OK)) {
         return err;
     }
     err = gpio_install_isr_service(0);
-    if (err) {
+    if (unlikely(err != ESP_OK)) {
         return err;
     }
     err = gpio_isr_handler_add(EINK_SPI_HRDY_PIN, eink_hrdy_isr, NULL);
-    if (err) {
+    if (unlikely(err != ESP_OK)) {
         return err;
     }
 
@@ -397,7 +390,7 @@ static esp_err_t eink_gpio_config(void)
     gpio_cfg.pin_bit_mask = (1 << EINK_SPI_CS_PIN);
     gpio_cfg.pull_up_en = GPIO_PULLUP_DISABLE;
     err = gpio_config(&gpio_cfg);
-    if (err) {
+    if (unlikely(err != ESP_OK)) {
         return err;
     }
     gpio_set_level(EINK_SPI_CS_PIN, EINK_HIGH);
@@ -405,7 +398,7 @@ static esp_err_t eink_gpio_config(void)
     /* Configure EPD power enable pin and turn the power on */
     gpio_cfg.pin_bit_mask = (1 << EINK_PWR_EN_PIN);
     err = gpio_config(&gpio_cfg);
-    if (err) {
+    if (unlikely(err != ESP_OK)) {
         return err;
     }
     gpio_set_level(EINK_PWR_EN_PIN, EINK_HIGH);
@@ -432,7 +425,7 @@ static esp_err_t eink_spi_config(void)
     };
 
     const esp_err_t err = spi_bus_initialize(EINK_SPI_HOST, &spi_cfg, SPI_DMA_CH_AUTO);
-    if (err) {
+    if (unlikely(err != ESP_OK)) {
         return err;
     }
     
@@ -467,7 +460,7 @@ static eink_err_t eink_wait_afsr(void)
         const eink_err_t err = eink_read_register(IT8951_LUTAFSR, &reg_value);
 
         /* Readout failure */
-        if (err) {
+        if (unlikely(err != EINK_OK)) {
             return err;
         }
 
@@ -491,27 +484,27 @@ static eink_err_t eink_read_word(uint16_t *data)
     eink_err_t err = EINK_OK;
     do {
         err = eink_wait_hrdy();
-        if (err) {
+        if (unlikely(err != EINK_OK)) {
             break;
         }
         gpio_set_level(EINK_SPI_CS_PIN, EINK_LOW);
-        if (spi_write16(IT8951_SPI_READ_DATA_PREAMBLE) != ESP_OK) {
+        if (unlikely(spi_write16(IT8951_SPI_READ_DATA_PREAMBLE) != ESP_OK)) {
             err = EINK_SPI_ERROR;
             break;
         }
         err = eink_wait_hrdy();
-        if (err) {
+        if (unlikely(err != EINK_OK)) {
             break;
         }
-        if (spi_write16(0x0000) != ESP_OK) { // Discard dummy data
+        if (unlikely(spi_write16(0x0000) != ESP_OK)) { // Discard dummy data
             err = EINK_SPI_ERROR;
             break;
         }
         err = eink_wait_hrdy();
-        if (err) {
+        if (unlikely(err != EINK_OK)) {
             break;
         }
-        if (spi_read16(data) != ESP_OK) {
+        if (unlikely(spi_read16(data) != ESP_OK)) {
             err = EINK_SPI_ERROR;
             break;
         }
@@ -526,19 +519,19 @@ static eink_err_t eink_write_word(uint16_t data)
     eink_err_t err = EINK_OK;
     do {
         err = eink_wait_hrdy();
-        if (err) {
+        if (unlikely(err != EINK_OK)) {
             break;
         }
         gpio_set_level(EINK_SPI_CS_PIN, EINK_LOW);
-        if (spi_write16(IT8951_SPI_WRITE_DATA_PREAMBLE) != ESP_OK) {
+        if (unlikely(spi_write16(IT8951_SPI_WRITE_DATA_PREAMBLE) != ESP_OK)) {
             err = EINK_SPI_ERROR;
             break;
         }
         err = eink_wait_hrdy();
-        if (err) {
+        if (unlikely(err != EINK_OK)) {
             break;
         }
-        if (spi_write16(data) != ESP_OK) {
+        if (unlikely(spi_write16(data) != ESP_OK)) {
             err = EINK_SPI_ERROR;
             break;
         }
@@ -553,19 +546,19 @@ static eink_err_t eink_write_command(uint16_t command)
     eink_err_t err = EINK_OK;
     do {
         err = eink_wait_hrdy();
-        if (err) {
+        if (unlikely(err != EINK_OK)) {
             break;
         }
         gpio_set_level(EINK_SPI_CS_PIN, EINK_LOW);
-        if (spi_write16(IT8951_SPI_CMD_PREAMBLE) != ESP_OK) {
+        if (unlikely(spi_write16(IT8951_SPI_CMD_PREAMBLE) != ESP_OK)) {
             err = EINK_SPI_ERROR;
             break;
         }
         err = eink_wait_hrdy();
-        if (err) {
+        if (unlikely(err != EINK_OK)) {
             break;
         }
-        if (spi_write16(command) != ESP_OK) {
+        if (unlikely(spi_write16(command) != ESP_OK)) {
             err = EINK_SPI_ERROR;
             break;
         }
@@ -578,11 +571,11 @@ static eink_err_t eink_write_command(uint16_t command)
 static eink_err_t eink_read_register(uint16_t address, uint16_t *data)
 {
     eink_err_t err = eink_write_command(IT8951_TCON_REG_RD);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
     err = eink_write_word(address);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     } 
     return eink_read_word(data);
@@ -591,11 +584,11 @@ static eink_err_t eink_read_register(uint16_t address, uint16_t *data)
 static eink_err_t eink_write_register(uint16_t address, uint16_t data)
 {
     eink_err_t err = eink_write_command(IT8951_TCON_REG_WR);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
     err = eink_write_word(address);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
     return eink_write_word(data);
@@ -604,13 +597,13 @@ static eink_err_t eink_write_register(uint16_t address, uint16_t data)
 static eink_err_t eink_write_args(uint16_t command, const uint16_t *args, size_t length)
 {
     eink_err_t err = eink_write_command(command);
-    if (err) {
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
 
     for (size_t i = 0; i < length; ++i) {
         err = eink_write_word(args[i]);
-        if (err) {
+        if (unlikely(err != EINK_OK)) {
             return err;
         }
     }
@@ -620,8 +613,8 @@ static eink_err_t eink_write_args(uint16_t command, const uint16_t *args, size_t
 
 static eink_err_t eink_set_target_memory_address(uint32_t address)
 {
-    eink_err_t err = eink_write_register(IT8951_LISAR + 2, GET_HIGH_WORD(address));
-    if (err) {
+    const eink_err_t err = eink_write_register(IT8951_LISAR + 2, GET_HIGH_WORD(address));
+    if (unlikely(err != EINK_OK)) {
         return err;
     }
     return eink_write_register(IT8951_LISAR, GET_LOW_WORD(address));
