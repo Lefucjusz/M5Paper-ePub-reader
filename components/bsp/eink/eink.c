@@ -48,7 +48,7 @@ static eink_err_t eink_write_args(uint16_t command, const uint16_t *args, size_t
 static eink_err_t eink_set_target_memory_address(uint32_t address);
 static eink_err_t eink_set_area(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 
-/* Public functtions */
+/* Public functions */
 eink_err_t eink_init(eink_rotation_t rotation, eink_color_t color)
 {
     eink_ctx.rotation = rotation;

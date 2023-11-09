@@ -10,6 +10,11 @@
         "esp_err.h": "c",
         "array": "c",
         "string": "c",
-        "string_view": "c"
+        "string_view": "c",
+        "bitset": "c",
+        "initializer_list": "c",
+        "regex": "c",
+        "freertos.h": "c",
+        "lvgl_task.h": "c"
     }
 }
