@@ -29,9 +29,6 @@ touch_err_t touch_init(touch_rotation_t rotation)
     if (unlikely(gpio_config(&gpio_cfg) != ESP_OK)) {
         return TOUCH_GPIO_ERROR;
     }
-    if (unlikely(i2c_init(TOUCH_I2C_PORT, TOUCH_SDA_PIN, TOUCH_SCL_PIN, TOUCH_I2C_SPEED_HZ) != ESP_OK)) { // TODO this should be moved outside
-        return TOUCH_I2C_ERROR;
-    }
     return TOUCH_OK;
 }
 
@@ -67,7 +64,7 @@ touch_err_t touch_get_coords(struct touch_coords_t *coords) // TODO add multiple
     if (touch_count > 0) {
         /* Read touch data */
         uint8_t touch_data[GT911_TOUCH_COORDS_SIZE];
-        err = i2c_read(GT911_I2C_ADDRESS, GT911_POINT_1_X_COORD_LSB, GT911_REG_ADDR_SIZE_BYTES, &touch_data, sizeof(touch_data));
+        err = i2c_read(GT911_I2C_ADDRESS, GT911_POINT_1_X_COORD_LSB_REG, GT911_REG_ADDR_SIZE_BYTES, &touch_data, sizeof(touch_data));
         if (unlikely(err != ESP_OK)) {
             return TOUCH_I2C_ERROR;
         }

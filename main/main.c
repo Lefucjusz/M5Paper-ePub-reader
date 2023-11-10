@@ -1,7 +1,14 @@
 #include "lvgl_task.h"
 #include "lvgl.h"
+#include "i2c.h"
+#include "real_time_clock.h"
 #include <esp_log.h>
 #include <driver/gpio.h>
+
+#define M5_I2C_PORT 0
+#define M5_SDA_PIN 21
+#define M5_SCL_PIN 22
+#define M5_I2C_SPEED_HZ 100000 // 100kHz
 
 void close_cb(lv_event_t *event)
 {
@@ -37,15 +44,31 @@ void app_main(void)
 
     gpio_set_level(2, 0); // Power switch
 
-    lvgl_init();
+    if (unlikely(i2c_init(M5_I2C_PORT, M5_SDA_PIN, M5_SCL_PIN, M5_I2C_SPEED_HZ) != ESP_OK)) {
+        ESP_LOGE("I2C", "I2C init failed");
+    }
 
-    lv_obj_t *button = lv_btn_create(lv_scr_act());
-    lv_obj_align(button, LV_ALIGN_CENTER, -40, -90);
-    lv_obj_add_event_cb(button, app_cb, LV_EVENT_CLICKED, NULL);
+    real_time_clock_err_t err = real_time_clock_init();
+    ESP_LOGE("", "Error: %d", err);
 
-    lv_obj_t *button_label = lv_label_create(button);
-    lv_label_set_text(button_label, "App");
-    lv_obj_center(button_label);
+    struct tm time;
+    while (1) {
+        ESP_ERROR_CHECK(real_time_clock_get_time(&time));
+        ESP_LOGI("", "%s", asctime(&time));
+        vTaskDelay(50);
+    }
 
-    lvgl_task_start();
+    
+
+    // lvgl_init();
+
+    // lv_obj_t *button = lv_btn_create(lv_scr_act());
+    // lv_obj_align(button, LV_ALIGN_CENTER, -40, -90);
+    // lv_obj_add_event_cb(button, app_cb, LV_EVENT_CLICKED, NULL);
+
+    // lv_obj_t *button_label = lv_label_create(button);
+    // lv_label_set_text(button_label, "App");
+    // lv_obj_center(button_label);
+
+    // lvgl_task_start();
 }

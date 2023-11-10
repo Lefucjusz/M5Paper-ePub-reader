@@ -33,3 +33,13 @@ inline static int32_t max(int32_t x, int32_t y)
 {
 	return (x > y) ? x : y;
 }
+
+inline static uint8_t dec2bcd(uint8_t dec)
+{
+	return (((dec / 10) << 4) | (dec % 10));
+}
+
+inline static uint8_t bcd2dec(uint8_t bcd)
+{
+	return (((bcd >> 4) * 10) + (bcd & 0x0F));
+}

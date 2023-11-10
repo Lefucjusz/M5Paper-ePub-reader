@@ -15,6 +15,7 @@
         "initializer_list": "c",
         "regex": "c",
         "freertos.h": "c",
-        "lvgl_task.h": "c"
+        "lvgl_task.h": "c",
+        "rtc.h": "c"
     }
 }
