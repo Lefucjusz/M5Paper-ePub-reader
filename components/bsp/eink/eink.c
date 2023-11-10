@@ -10,7 +10,6 @@
 /* TODO:
  * - deinit;
  * - entering sleep mode after refresh;
- * - better transfer handling - no polling;
  * - doxygen;
  */
 
@@ -74,6 +73,10 @@ eink_err_t eink_init(eink_rotation_t rotation, eink_color_t color)
     if (unlikely(eink_spi_config() != ESP_OK)) {
         return EINK_SPI_ERROR;
     }
+
+    int freq;
+    spi_device_get_actual_freq(eink_ctx.spi, &freq);
+    ESP_LOGI("PARAMETER", "SPI freq: %dkHz", freq);
 
     /* Turn on the controller, enable I80 pack write */
     eink_err_t err = eink_write_command(IT8951_TCON_SYS_RUN);
@@ -205,8 +208,14 @@ eink_err_t eink_write(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint
         return EINK_NOT_ALIGNED;
     }
 
+    /* Wait for LUT engine to finish previous operation */
+    eink_err_t err = eink_wait_afsr();
+    if (unlikely(err != EINK_OK)) {
+        return err;
+    }
+
     /* Set target memory address */
-    eink_err_t err = eink_set_target_memory_address(EINK_TARGET_MEMORY_ADDRESS);
+    err = eink_set_target_memory_address(EINK_TARGET_MEMORY_ADDRESS);
     if (unlikely(err != EINK_OK)) {
         return err;
     }
@@ -266,6 +275,7 @@ eink_err_t eink_write_full(const uint8_t *px_map)
 
 eink_err_t eink_refresh(uint16_t x, uint16_t y, uint16_t w, uint16_t h, eink_update_mode_t mode)
 {
+    /* Sanity check */
     if (unlikely(mode == EINK_UPDATE_MODE_NONE)) {
         return EINK_INVALID_ARG;
     }
@@ -273,6 +283,12 @@ eink_err_t eink_refresh(uint16_t x, uint16_t y, uint16_t w, uint16_t h, eink_upd
     /* Display requires 4 pixel horizontal alignment */
     if (unlikely((x % 4) != 0) || ((w % 4) != 0)) {
         return EINK_NOT_ALIGNED;
+    }
+    
+    /* Wait for LUT engine to finish previous operation */
+    eink_err_t err = eink_wait_afsr();
+    if (unlikely(err != EINK_OK)) {
+        return err;
     }
 
     uint16_t args[7];
@@ -310,13 +326,7 @@ eink_err_t eink_refresh(uint16_t x, uint16_t y, uint16_t w, uint16_t h, eink_upd
     args[6] = GET_HIGH_WORD(EINK_TARGET_MEMORY_ADDRESS);
 
     /* Write to display */
-    const eink_err_t err = eink_write_args(IT8951_I80_CMD_DPY_BUF_AREA, args, ARRAY_SIZE(args));
-    if (unlikely(err != EINK_OK)) {
-        return err;
-    }
-
-    /* Wait for LUT engine to finish operation */
-    return eink_wait_afsr();
+    return eink_write_args(IT8951_I80_CMD_DPY_BUF_AREA, args, ARRAY_SIZE(args));
 }
 
 eink_err_t eink_refresh_full(eink_update_mode_t mode)
@@ -454,7 +464,7 @@ static eink_err_t eink_wait_hrdy(void)
 
 static eink_err_t eink_wait_afsr(void)
 {
-    const TickType_t init_ticks = xTaskGetTickCount();
+    const TickType_t initial_ticks = xTaskGetTickCount();
     while (1) {
         uint16_t reg_value;
         const eink_err_t err = eink_read_register(IT8951_LUTAFSR, &reg_value);
@@ -470,7 +480,7 @@ static eink_err_t eink_wait_afsr(void)
         }
 
         /* Timeout */
-        if ((xTaskGetTickCount() - init_ticks) >= pdMS_TO_TICKS(EINK_TIMEOUT_MS)) {
+        if ((xTaskGetTickCount() - initial_ticks) >= pdMS_TO_TICKS(EINK_TIMEOUT_MS)) {
             return EINK_TIMEOUT;
         }
         

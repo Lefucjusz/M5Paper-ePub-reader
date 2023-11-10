@@ -12,6 +12,7 @@
 #define LVGL_TASK_HANDLER_PERIOD_MS 10
 
 #define LVGL_DRAW_BUFFER_SIZE ((EINK_DISPLAY_WIDTH * EINK_DISPLAY_HEIGHT) / 10) // 1/10 of the whole screen
+#define LVGL_FAST_PER_DEEP_REFRESHES 20 // Number of fast refreshes between two deep refreshes
 
 void lvgl_init(void);
 void lvgl_task_start(void);

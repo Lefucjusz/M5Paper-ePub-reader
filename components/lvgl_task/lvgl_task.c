@@ -12,12 +12,14 @@ struct lvgl_ctx_t
 	lv_color_t draw_buf[LVGL_DRAW_BUFFER_SIZE];
 	lv_disp_drv_t disp_drv;
 	lv_indev_drv_t indev_drv;
+    uint8_t fast_refresh_count;
 };
 
-static struct lvgl_ctx_t lvgl_ctx;
+static struct lvgl_ctx_t EXT_RAM_BSS_ATTR lvgl_ctx;
 
 /* Private functions declarations */
 static void lvgl_transform_pixel_map(lv_color_t *px_map, size_t size);
+static void lvgl_refresh_screen(void);
 static void lvgl_on_display_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *px_map);
 static void lvgl_coords_rounder(lv_disp_drv_t *disp_drv, lv_area_t *area);
 static void lvgl_on_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data);
@@ -32,9 +34,6 @@ static void lvgl_tick_callback(void *arg);
 /* Public functions */
 void lvgl_init(void)
 {
-    /* Clear context */
-    memset(&lvgl_ctx, 0, sizeof(lvgl_ctx));
-
     /* Initialize LVGL */
     lv_init();
 
@@ -56,43 +55,62 @@ static void lvgl_transform_pixel_map(lv_color_t *px_map, size_t size)
     const size_t iterations = size / sizeof(uint32_t);
     const uint32_t *src = (const uint32_t *)px_map;
     uint16_t *dst = (uint16_t *)px_map;
-    // uint8_t pixels[4];
+    uint8_t pixels[4];
 
     /* Transform */
     for (size_t i = 0; i < iterations; ++i) {
-        lv_color_t color;
+        // lv_color_t color;
 
-        color.full = (src[i] >> 24) & 0xFF;
-        const uint8_t pixel0 = lv_color_brightness(color) / 16;
+        // color.full = (src[i] >> 24) & 0xFF;
+        // pixels[0] = lv_color_brightness(color) / 16; // TODO optimize
 
-        color.full = (src[i] >> 16) & 0xFF;
-        const uint8_t pixel1 = lv_color_brightness(color) / 16;
+        // color.full = (src[i] >> 16) & 0xFF;
+        // pixels[1] = lv_color_brightness(color) / 16;
 
-        color.full = (src[i] >> 8) & 0xFF;
-        const uint8_t pixel2 = lv_color_brightness(color) / 16;
+        // color.full = (src[i] >> 8) & 0xFF;
+        // pixels[2] = lv_color_brightness(color) / 16;
 
-        color.full = (src[i] >> 0) & 0xFF;
-        const uint8_t pixel3 = lv_color_brightness(color) / 16;
+        // color.full = (src[i] >> 0) & 0xFF;
+        // pixels[3] = lv_color_brightness(color) / 16;
 
-        dst[i] = MAKE_WORD(MAKE_BYTE(pixel1, pixel0), MAKE_BYTE(pixel3, pixel2));
+
+        pixels[0] = ((src[i] >> 24) & 0xFF) >> 4; // TODO this only works for monochrome
+        pixels[1] = ((src[i] >> 16) & 0xFF) >> 4;
+        pixels[2] = ((src[i] >> 8) & 0xFF) >> 4;
+        pixels[3] = ((src[i] >> 0) & 0xFF) >> 4;
+
+        dst[i] = MAKE_WORD(MAKE_BYTE(pixels[1], pixels[0]), MAKE_BYTE(pixels[3], pixels[2]));
     }
 } 
 
+static void lvgl_refresh_screen(void)
+{
+    if (lvgl_ctx.fast_refresh_count < LVGL_FAST_PER_DEEP_REFRESHES) {
+        eink_refresh_full(EINK_UPDATE_MODE_DU4);
+        ++lvgl_ctx.fast_refresh_count;
+    } 
+    else {
+        eink_refresh_full(EINK_UPDATE_MODE_GC16);
+        lvgl_ctx.fast_refresh_count = 0;
+    }
+}
+
 static void lvgl_on_display_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *px_map)
 {
-    // static uint32_t last_refresh;
+    static uint32_t last_refresh;
 
     const size_t dx = (area->x2 - area->x1) + 1;
 	const size_t dy = (area->y2 - area->y1) + 1;
+    const size_t area_size = dx * dy;
 
-    lvgl_transform_pixel_map(px_map, dx * dy);
+    lvgl_transform_pixel_map(px_map, area_size);
     eink_write(area->x1, area->y1, dx, dy, (uint8_t *)px_map);
 
     if (lv_disp_flush_is_last(disp_drv)) {
-        eink_refresh_full(EINK_UPDATE_MODE_GL16);
-        // uint32_t current_refresh = tick_cnt;
-        // ESP_LOGE("PROFILING", "Time between refreshes: %lums", current_refresh - last_refresh);
-        // last_refresh = current_refresh;
+        lvgl_refresh_screen();
+        const uint32_t current_refresh = lv_tick_get();
+        ESP_LOGE("PROFILING", "Time between refreshes: %lums", current_refresh - last_refresh);
+        last_refresh = current_refresh;
     }
 
     lv_disp_flush_ready(&lvgl_ctx.disp_drv);
@@ -117,6 +135,9 @@ static void lvgl_on_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
 
 static eink_err_t lvgl_display_init(void)
 {
+    /* Clear fast refreshes counter */
+    lvgl_ctx.fast_refresh_count = 0;
+
     /* Initialize eink hardware */
     const eink_err_t err = eink_init(EINK_ROTATION_90, EINK_COLOR_NORMAL);
     if (unlikely(err != EINK_OK)) {
