@@ -7,7 +7,7 @@
 #define EINK_DISPLAY_HEIGHT 540
 
 #define EINK_SPI_HOST HSPI_HOST
-#define EINK_SPI_CLOCK_SPEED_HZ (20 * 1000 * 1000) // Max. IT8951 SCLK speed is 24MHz, but ESP32 SPI clock can be either 20MHz or 26.7MHz; the latter one results in glitches
+#define EINK_SPI_CLOCK_SPEED_HZ (24 * 1000 * 1000) // Max. IT8951 SCLK speed is 24MHz, but ESP32 SPI clock can be either 20MHz or 26.7MHz; the latter one results in glitches
 #define EINK_SPI_MODE 0
 #define EINK_SPI_MAX_TRANSFER_SIZE_BYTES 8192
 
@@ -25,11 +25,13 @@
 #define EINK_HIGH 1
 
 #define EINK_TIMEOUT_MS 2000
-#define EINK_AFSR_POLLING_INTERVAL_MS 50
+#define EINK_AFSR_POLLING_INTERVAL_MS 10
 
 #define EINK_PIXELS_PER_BYTE 2
 #define EINK_WIDTH_PIXELS_ALIGNMENT 4
 #define EINK_PIXEL_BLACK 0x00
+#define EINK_PIXEL_DARK_GRAY_DU4 0x05
+#define EINK_PIXEL_LIGHT_GRAY_DU4 0x0A
 #define EINK_PIXEL_WHITE 0x0F
 
 typedef enum
@@ -40,8 +42,8 @@ typedef enum
     EINK_UPDATE_MODE_GL16,
     EINK_UPDATE_MODE_GLR16,
     EINK_UPDATE_MODE_GLD16,
-    EINK_UPDATE_MODE_DU4,
     EINK_UPDATE_MODE_A2,
+    EINK_UPDATE_MODE_DU4,
     EINK_UPDATE_MODE_NONE 
 } eink_update_mode_t;
 
@@ -74,7 +76,10 @@ typedef enum
 
 
 eink_err_t eink_init(eink_rotation_t rotation, eink_color_t color);
-void eink_deinit(void);
+eink_err_t eink_deinit(void);
+
+eink_err_t eink_wakeup(void);
+eink_err_t eink_sleep(void);
 
 void eink_set_rotation(eink_rotation_t rotation);
 eink_rotation_t eink_get_rotation(void);

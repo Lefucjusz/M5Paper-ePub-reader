@@ -78,12 +78,11 @@ eink_err_t eink_init(eink_rotation_t rotation, eink_color_t color)
     spi_device_get_actual_freq(eink_ctx.spi, &freq);
     ESP_LOGI("PARAMETER", "SPI freq: %dkHz", freq);
 
-    /* Turn on the controller, enable I80 pack write */
-    eink_err_t err = eink_write_command(IT8951_TCON_SYS_RUN);
-    if (unlikely(err != EINK_OK)) {
-        return err;
-    }
-    err = eink_write_register(IT8951_I80CPCR, 0x0001);
+    /* Turn on the controller */
+    eink_wakeup();
+
+    /* Enable I80 pack write */
+    eink_err_t err = eink_write_register(IT8951_I80CPCR, 0x0001);
     if (unlikely(err != EINK_OK)) {
         return err;
     }
@@ -118,9 +117,32 @@ eink_err_t eink_init(eink_rotation_t rotation, eink_color_t color)
     return eink_refresh_full(EINK_UPDATE_MODE_INIT);
 }
 
-void eink_deinit(void)
+eink_err_t eink_deinit(void)
 {
-    // TODO deinit SPI, turn off display power, delete semaphore, free spi_buffer
+    /* Remove SPI device from bus */
+    if (unlikely(spi_bus_remove_device(eink_ctx.spi) != ESP_OK)) {
+        return EINK_SPI_ERROR;
+    }
+
+    /* Free used resources */
+    vSemaphoreDelete(eink_ctx.hrdy_semaphore);
+    free(eink_ctx.spi_buffer);
+
+    /* Disable controller and cut off its power */
+    gpio_set_level(EINK_SPI_CS_PIN, EINK_HIGH);
+    gpio_set_level(EINK_PWR_EN_PIN, EINK_LOW);
+
+    return EINK_OK;
+}
+
+eink_err_t eink_wakeup(void)
+{
+    return eink_write_command(IT8951_TCON_SYS_RUN);
+}
+
+eink_err_t eink_sleep(void)
+{
+    return eink_write_command(IT8951_TCON_SLEEP);
 }
 
 void eink_set_rotation(eink_rotation_t rotation)
@@ -418,7 +440,7 @@ static esp_err_t eink_gpio_config(void)
 
 static esp_err_t eink_spi_config(void)
 {
-    const spi_bus_config_t spi_cfg = {
+    const spi_bus_config_t spi_cfg = { // TODO this should be moved outside like I2C
         .miso_io_num = EINK_SPI_MISO_PIN,
         .mosi_io_num = EINK_SPI_MOSI_PIN,
         .sclk_io_num = EINK_SPI_SCK_PIN,

@@ -9,6 +9,9 @@
 #define LVGL_TICK_TIMER_PERIOD_MS 1
 #define LVGL_TICK_TIMER_NAME "lvgl_tick_timer"
 
+#define LVGL_SLEEP_TIMER_PERIOD_MS 4000
+#define LVGL_SLEEP_TIMER_NAME "lvgl_sleep_timer"
+
 #define LVGL_TASK_HANDLER_PERIOD_MS 10
 
 #define LVGL_DRAW_BUFFER_SIZE ((EINK_DISPLAY_WIDTH * EINK_DISPLAY_HEIGHT) / 10) // 1/10 of the whole screen
