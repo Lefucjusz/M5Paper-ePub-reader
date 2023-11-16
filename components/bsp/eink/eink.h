@@ -7,7 +7,7 @@
 #define EINK_DISPLAY_HEIGHT 540
 
 #define EINK_SPI_HOST HSPI_HOST
-#define EINK_SPI_CLOCK_SPEED_HZ (24 * 1000 * 1000) // Max. IT8951 SCLK speed is 24MHz, but ESP32 SPI clock can be either 20MHz or 26.7MHz; the latter one results in glitches
+#define EINK_SPI_CLOCK_SPEED_HZ (20 * 1000 * 1000) // Max. IT8951 SCLK speed is 24MHz, but ESP32 SPI clock can be either 20MHz or 26.7MHz; the latter one results in glitches
 #define EINK_SPI_MODE 0
 #define EINK_SPI_MAX_TRANSFER_SIZE_BYTES 8192
 

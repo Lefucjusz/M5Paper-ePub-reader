@@ -1,5 +1,4 @@
 #include "i2c.h"
-#include <freertos/FreeRTOS.h>
 
 #define I2C_MAKE_ADDR(addr, mode) (((addr) << 1) | (mode))
 #define I2C_ACK_CHECK_DISABLE 0

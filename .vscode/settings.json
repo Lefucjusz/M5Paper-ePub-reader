@@ -16,6 +16,17 @@
         "regex": "c",
         "freertos.h": "c",
         "lvgl_task.h": "c",
-        "rtc.h": "c"
+        "rtc.h": "c",
+        "esp_adc_cal.h": "c",
+        "esp_adc_cal_types_legacy.h": "c",
+        "adc.h": "c",
+        "adc_channel.h": "c",
+        "*.tcc": "c",
+        "ratio": "c",
+        "system_error": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
     }
 }

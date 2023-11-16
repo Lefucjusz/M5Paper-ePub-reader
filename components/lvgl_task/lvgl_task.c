@@ -1,6 +1,6 @@
 #include "lvgl_task.h"
 #include "utils.h"
-#include "touch.h"
+#include "touch_panel.h"
 #include <lvgl.h>
 #include <esp_log.h>
 #include <esp_timer.h>
@@ -13,6 +13,7 @@ struct lvgl_ctx_t
 	lv_color_t draw_buf[LVGL_DRAW_BUFFER_SIZE];
 	lv_disp_drv_t disp_drv;
 	lv_indev_drv_t indev_drv;
+    SemaphoreHandle_t lvgl_task_semaphore;
     eink_update_mode_t refresh_mode;
     uint8_t fast_refresh_count;
     TimerHandle_t eink_sleep_timer;
@@ -29,7 +30,7 @@ static void lvgl_coords_rounder(lv_disp_drv_t *disp_drv, lv_area_t *area);
 static void lvgl_on_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data);
 
 static eink_err_t lvgl_display_init(void);
-static touch_err_t lvgl_touch_init(void);
+static touch_panel_err_t lvgl_touch_init(void);
 static esp_err_t lvgl_tick_timer_init(void);
 static esp_err_t lvgl_eink_sleep_timer_init(void);
 
@@ -40,21 +41,35 @@ static void lvgl_tick_timer_callback(void *arg);
 static void lvgl_eink_sleep_timer_callback(TimerHandle_t timer);
 
 /* Public functions */
-void lvgl_init(void)
+void lvgl_task_init(void)
 {
     /* Initialize LVGL */
     lv_init();
+
+    /* Create LVGL task semaphore */
+    lvgl_ctx.lvgl_task_semaphore = xSemaphoreCreateMutex();
 
     /* Initialize hardware */
     lvgl_display_init(); // TODO error handling
     lvgl_touch_init();
     lvgl_tick_timer_init();
+
     lvgl_eink_sleep_timer_init();
 }
 
 void lvgl_task_start(void)
 {
     xTaskCreatePinnedToCore(lvgl_task, LVGL_TASK_NAME, LVGL_TASK_STACK_SIZE / sizeof(StackType_t), NULL, 0, NULL, LVGL_TASK_CORE_AFFINITY);
+}
+
+bool lvgl_task_acquire(void)
+{
+    return xSemaphoreTake(lvgl_ctx.lvgl_task_semaphore, portMAX_DELAY);
+}
+
+void lvgl_task_release(void)
+{
+    xSemaphoreGive(lvgl_ctx.lvgl_task_semaphore);
 }
 
 /* Private functions */
@@ -77,6 +92,7 @@ static void lvgl_update_refresh_mode(uint8_t px_brightness)
             lvgl_ctx.refresh_mode = EINK_UPDATE_MODE_DU4; // Can be handled by DU4
         }
         else {
+            ESP_LOGW("", "%d", px_brightness);
             lvgl_ctx.refresh_mode = EINK_UPDATE_MODE_GC16; // Can be handled only by GC16
         }
     }
@@ -139,17 +155,14 @@ static void lvgl_on_display_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area
 {
     static uint32_t last_refresh;
 
-    const size_t dx = (area->x2 - area->x1) + 1;
-	const size_t dy = (area->y2 - area->y1) + 1;
-    const size_t area_size = dx * dy;
+    const size_t width = (area->x2 - area->x1) + 1;
+	const size_t height = (area->y2 - area->y1) + 1;
+    const size_t area_size = width * height;
 
     lvgl_transform_pixel_map(px_map, area_size);
 
-    // const uint32_t start_write = lv_tick_get();
     lvgl_eink_wakeup();
-    eink_write(area->x1, area->y1, dx, dy, (uint8_t *)px_map);
-    // const uint32_t end_write = lv_tick_get();
-    // ESP_LOGE("PROFILING", "Writing time of %zu bytes: %lums", area_size/2, end_write - start_write);
+    eink_write(area->x1, area->y1, width, height, (uint8_t *)px_map);
 
     if (lv_disp_flush_is_last(disp_drv)) {
         lvgl_refresh_screen();
@@ -171,7 +184,7 @@ static void lvgl_coords_rounder(lv_disp_drv_t *disp_drv, lv_area_t *area)
 
 static void lvgl_on_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
 {
-    struct touch_coords_t coords;
+    struct touch_panel_coords_t coords;
     touch_get_coords(&coords);
 
     data->point.x = coords.x;
@@ -209,10 +222,10 @@ static eink_err_t lvgl_display_init(void)
     return EINK_OK;
 }
 
-static touch_err_t lvgl_touch_init(void)
+static touch_panel_err_t lvgl_touch_init(void)
 {
-    const touch_err_t err = touch_init(TOUCH_ROTATION_90);
-    if (unlikely(err != TOUCH_OK)) {
+    const touch_panel_err_t err = touch_panel_init(TOUCH_PANEL_ROTATION_90);
+    if (unlikely(err != TOUCH_PANEL_OK)) {
         return err;
     }
 
@@ -223,7 +236,7 @@ static touch_err_t lvgl_touch_init(void)
     /* Register input device driver */
 	lv_indev_drv_register(&lvgl_ctx.indev_drv);
 
-    return TOUCH_OK;
+    return TOUCH_PANEL_OK;
 }
 
 static esp_err_t lvgl_tick_timer_init(void)
@@ -281,8 +294,11 @@ static eink_err_t lvgl_eink_wakeup(void)
 static void lvgl_task(void *arg)
 {
     while (1) {
-        lv_task_handler();
-        vTaskDelay(pdMS_TO_TICKS(LVGL_TASK_HANDLER_PERIOD_MS));
+        if (lvgl_task_acquire()) {
+            lv_task_handler();
+            lvgl_task_release();
+            vTaskDelay(pdMS_TO_TICKS(LVGL_TASK_HANDLER_PERIOD_MS));
+        }
     }
 }
 

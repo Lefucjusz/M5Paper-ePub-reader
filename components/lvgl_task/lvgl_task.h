@@ -1,6 +1,7 @@
 #pragma once
 
 #include "eink.h"
+#include <stdbool.h>
 
 #define LVGL_TASK_STACK_SIZE 4096 // bytes
 #define LVGL_TASK_CORE_AFFINITY 1
@@ -17,5 +18,8 @@
 #define LVGL_DRAW_BUFFER_SIZE ((EINK_DISPLAY_WIDTH * EINK_DISPLAY_HEIGHT) / 10) // 1/10 of the whole screen
 #define LVGL_FAST_PER_DEEP_REFRESHES 20 // Number of fast refreshes between two deep refreshes
 
-void lvgl_init(void);
+void lvgl_task_init(void);
 void lvgl_task_start(void);
+
+bool lvgl_task_acquire(void);
+void lvgl_task_release(void);

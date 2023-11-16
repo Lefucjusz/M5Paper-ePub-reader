@@ -7,12 +7,6 @@
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
-/* TODO:
- * - deinit;
- * - entering sleep mode after refresh;
- * - doxygen;
- */
-
 struct eink_ctx_t
 {
     spi_device_handle_t spi;
