@@ -1,9 +1,11 @@
 #include "gui_status_bar.h"
 #include "gui_dimensions.h"
+#include "gui_set_time_popup.h"
 #include "lvgl.h" 
 #include "real_time_clock.h"
 #include "battery.h"
 #include <time.h>
+#include <esp_log.h>
 
 struct gui_status_bar_ctx_t
 {
@@ -17,6 +19,7 @@ static struct gui_status_bar_ctx_t ctx;
 
 static void gui_set_battery_icon(uint8_t percent);
 static void gui_status_bar_update_callback(lv_timer_t *timer);
+static void gui_clock_clicked_event_callback(lv_event_t *event);
 
 void gui_status_bar_create(void)
 {
@@ -35,6 +38,8 @@ void gui_status_bar_create(void)
     ctx.clock_label = lv_label_create(status_bar);
     lv_obj_set_height(ctx.clock_label, GUI_STATUS_BAR_HEIGHT);
     lv_obj_center(ctx.clock_label);
+    lv_obj_add_flag(ctx.clock_label, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(ctx.clock_label, gui_clock_clicked_event_callback, LV_EVENT_CLICKED, NULL);
 
     /* Create battery label */
     ctx.battery_label = lv_label_create(status_bar);
@@ -99,4 +104,10 @@ static void gui_set_battery_icon(uint8_t percent)
     else {
         lv_label_set_text(ctx.battery_icon, LV_SYMBOL_BATTERY_FULL);
     }
+}
+
+static void gui_clock_clicked_event_callback(lv_event_t *event)
+{
+    ESP_LOGI("", "Creating window...");
+    gui_set_time_popup_create();
 }
