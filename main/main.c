@@ -3,12 +3,11 @@
 #include "i2c.h"
 #include "battery.h"
 #include "real_time_clock.h"
-#include "main_window.h"
+#include "gui_status_bar.h"
 #include <esp_log.h>
 #include <driver/gpio.h>
 
 /* TODO:
- * - battery level measurement;
  * - status bar;
  * - sleep mode;
  * - doxygen;
@@ -41,7 +40,7 @@ void app_main(void)
     battery_init();
     lvgl_task_init(); // TODO this should rather be gui_task
 
-    main_window_create();
+    gui_status_bar_create();
 
     lvgl_task_start();
 }
