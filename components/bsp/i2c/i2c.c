@@ -4,33 +4,29 @@
 #define I2C_ACK_CHECK_DISABLE 0
 #define I2C_ACK_CHECK_ENABLE 1
 
-static i2c_port_t i2c_port;
-
-esp_err_t i2c_init(i2c_port_t port, int sda_pin, int scl_pin, uint32_t scl_speed)
+esp_err_t i2c_init(void)
 {
-    i2c_port = port;
-
     const i2c_config_t i2c_cfg = {
         .mode = I2C_MODE_MASTER,
-        .sda_io_num = sda_pin,
+        .sda_io_num = M5_SDA_PIN,
         .sda_pullup_en = GPIO_PULLUP_DISABLE,
-        .scl_io_num = scl_pin,
+        .scl_io_num = M5_SCL_PIN,
         .scl_pullup_en = GPIO_PULLUP_DISABLE,
-        .master.clk_speed = scl_speed,
+        .master.clk_speed = M5_I2C_SPEED_HZ,
         .clk_flags = 0
     };
 
     /* Configure and install peripheral */
-    esp_err_t err = i2c_param_config(i2c_port, &i2c_cfg);
+    esp_err_t err = i2c_param_config(M5_I2C_PORT, &i2c_cfg);
     if (unlikely(err != ESP_OK)) {
         return err;
     }
-    return i2c_driver_install(i2c_port, i2c_cfg.mode, 0, 0, 0);
+    return i2c_driver_install(M5_I2C_PORT, i2c_cfg.mode, 0, 0, 0);
 }
 
 esp_err_t i2c_deinit(void)
 {
-    return i2c_driver_delete(i2c_port);
+    return i2c_driver_delete(M5_I2C_PORT);
 }
 
 esp_err_t i2c_read(uint8_t dev_addr, uint16_t reg_addr, i2c_reg_addr_size_t reg_addr_size, void *data, size_t size)
@@ -95,7 +91,7 @@ esp_err_t i2c_read(uint8_t dev_addr, uint16_t reg_addr, i2c_reg_addr_size_t reg_
         if (unlikely(err != ESP_OK)) {
             break;
         }
-        err = i2c_master_cmd_begin(i2c_port, cmd, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+        err = i2c_master_cmd_begin(M5_I2C_PORT, cmd, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
         if (unlikely(err != ESP_OK)) {
             break;
         }
@@ -153,7 +149,7 @@ esp_err_t i2c_write(uint8_t dev_addr, uint16_t reg_addr, i2c_reg_addr_size_t reg
         if (unlikely(err != ESP_OK)) {
             break;
         }
-        err = i2c_master_cmd_begin(i2c_port, cmd, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+        err = i2c_master_cmd_begin(M5_I2C_PORT, cmd, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
         if (unlikely(err != ESP_OK)) {
             break;
         }

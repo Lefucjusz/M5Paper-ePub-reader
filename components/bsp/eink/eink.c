@@ -434,15 +434,6 @@ static esp_err_t eink_gpio_config(void)
 
 static esp_err_t eink_spi_config(void)
 {
-    const spi_bus_config_t spi_cfg = { // TODO this should be moved outside like I2C
-        .miso_io_num = EINK_SPI_MISO_PIN,
-        .mosi_io_num = EINK_SPI_MOSI_PIN,
-        .sclk_io_num = EINK_SPI_SCK_PIN,
-        .quadhd_io_num = -1, // Unused
-        .quadwp_io_num = -1, // Unused
-        .max_transfer_sz = EINK_SPI_MAX_TRANSFER_SIZE_BYTES
-    };
-    
     const spi_device_interface_config_t dev_cfg = {
         .clock_speed_hz = EINK_SPI_CLOCK_SPEED_HZ,
         .mode = EINK_SPI_MODE,
@@ -450,11 +441,6 @@ static esp_err_t eink_spi_config(void)
         .queue_size = 1
     };
 
-    const esp_err_t err = spi_bus_initialize(EINK_SPI_HOST, &spi_cfg, SPI_DMA_CH_AUTO);
-    if (unlikely(err != ESP_OK)) {
-        return err;
-    }
-    
     return spi_bus_add_device(EINK_SPI_HOST, &dev_cfg, &eink_ctx.spi);
 }
 

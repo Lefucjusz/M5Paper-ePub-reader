@@ -1,22 +1,12 @@
 #include "lvgl_task.h"
 #include "lvgl.h"
 #include "i2c.h"
+#include "spi.h"
 #include "battery.h"
 #include "real_time_clock.h"
 #include "gui_status_bar.h"
 #include <esp_log.h>
 #include <driver/gpio.h>
-
-/* TODO:
- * - status bar;
- * - sleep mode;
- * - doxygen;
- */
-
-#define M5_I2C_PORT 0
-#define M5_SDA_PIN 21
-#define M5_SCL_PIN 22
-#define M5_I2C_SPEED_HZ 100000 // 100kHz
 
 void app_main(void)
 {
@@ -32,9 +22,8 @@ void app_main(void)
 
     gpio_set_level(2, 1); // Power switch
 
-    if (unlikely(i2c_init(M5_I2C_PORT, M5_SDA_PIN, M5_SCL_PIN, M5_I2C_SPEED_HZ) != ESP_OK)) {
-        ESP_LOGE("I2C", "I2C init failed");
-    }
+    ESP_ERROR_CHECK(i2c_init());
+    ESP_ERROR_CHECK(spi_init());
 
     real_time_clock_init();
     battery_init();

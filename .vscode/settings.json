@@ -28,6 +28,9 @@
         "tuple": "c",
         "type_traits": "c",
         "utility": "c",
-        "gui_dimensions.h": "c"
+        "gui_dimensions.h": "c",
+        "it8951.h": "c",
+        "spi.h": "c",
+        "i2c.h": "c"
     }
 }

@@ -1,22 +1,20 @@
 #pragma once
 
 #include "IT8951.h"
+#include "spi.h"
 #include <esp_err.h>
 
 #define EINK_DISPLAY_WIDTH 960
 #define EINK_DISPLAY_HEIGHT 540
 
-#define EINK_SPI_HOST HSPI_HOST
+#define EINK_SPI_HOST M5_SPI_HOST
+#define EINK_SPI_MAX_TRANSFER_SIZE_BYTES SPI_MAX_TRANSFER_SIZE_BYTES
+
 #define EINK_SPI_CLOCK_SPEED_HZ (20 * 1000 * 1000) // Max. IT8951 SCLK speed is 24MHz, but ESP32 SPI clock can be either 20MHz or 26.7MHz; the latter one results in glitches
 #define EINK_SPI_MODE 0
-#define EINK_SPI_MAX_TRANSFER_SIZE_BYTES 8192
 
-#define EINK_SPI_MISO_PIN 13
-#define EINK_SPI_MOSI_PIN 12
-#define EINK_SPI_SCK_PIN 14
 #define EINK_SPI_CS_PIN 15
 #define EINK_SPI_HRDY_PIN 27
-
 #define EINK_PWR_EN_PIN 23
 
 #define EINK_TARGET_MEMORY_ADDRESS 0x001236E0
