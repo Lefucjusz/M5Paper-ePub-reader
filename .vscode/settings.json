@@ -31,6 +31,9 @@
         "gui_dimensions.h": "c",
         "it8951.h": "c",
         "spi.h": "c",
-        "i2c.h": "c"
+        "i2c.h": "c",
+        "lv_theme_basic.h": "c",
+        "lv_theme_mono.h": "c",
+        "lv_theme_default.h": "c"
     }
 }

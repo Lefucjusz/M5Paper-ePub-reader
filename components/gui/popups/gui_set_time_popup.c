@@ -1,10 +1,11 @@
 #include "gui_set_time_popup.h"
+#include "gui_colors.h"
 #include "lvgl.h"
 #include "real_time_clock.h"
 #include <esp_log.h>
 #include <stdio.h>
 
-#define GUI_SET_TIME_POPUP_TITLE "Set time"
+#define GUI_SET_TIME_POPUP_TITLE (LV_SYMBOL_SETTINGS" Set time")
 
 #define GUI_HOURS_PER_DAY 24
 #define GUI_MINUTES_PER_HOUR 60
@@ -22,60 +23,53 @@ struct gui_set_time_popup_ctx
 };
 
 static struct gui_set_time_popup_ctx ctx;
+static const char *button_labels[] = {"Cancel", "Save", NULL};
 
 static bool gui_create_roller_data(void);
-static void gui_cancel_callback(lv_event_t *event);
-static void gui_save_callback(lv_event_t *event);
+static void gui_buttons_callback(lv_event_t *event);
 
 void gui_set_time_popup_create(void)
 {
     /* Create message box */
-    ctx.msgbox = lv_msgbox_create(NULL, GUI_SET_TIME_POPUP_TITLE, "", NULL, false); // TODO empty string
-    lv_obj_set_style_border_side(ctx.msgbox, LV_BORDER_SIDE_FULL, LV_PART_MAIN);
-    lv_obj_set_style_border_width(ctx.msgbox, 2, LV_PART_MAIN);
+    ctx.msgbox = lv_msgbox_create(NULL, GUI_SET_TIME_POPUP_TITLE, " ", button_labels, false);
+    lv_obj_add_event_cb(ctx.msgbox, gui_buttons_callback, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_style_text_font(lv_msgbox_get_title(ctx.msgbox), &lv_font_montserrat_36, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(lv_msgbox_get_title(ctx.msgbox), GUI_COLOR_LIGHT_GREY, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(lv_msgbox_get_title(ctx.msgbox), LV_OPA_COVER, LV_PART_MAIN); // TODO fix spacing
+    lv_obj_set_width(ctx.msgbox, GUI_SET_TIME_POPUP_WIDTH);
     lv_obj_center(ctx.msgbox);
 
     /* Create roller data */
     gui_create_roller_data();
 
     /* Create hour roller */
-    ctx.hr_roller = lv_roller_create(ctx.msgbox);
+    ctx.hr_roller = lv_roller_create(lv_msgbox_get_content(ctx.msgbox)); // TODO remove elastic scrolling
     lv_obj_set_style_text_font(ctx.hr_roller, &lv_font_montserrat_36, LV_PART_MAIN);
-    lv_roller_set_options(ctx.hr_roller, ctx.hr_roller_data, LV_ROLLER_MODE_NORMAL); // TODO styles
-    lv_roller_set_visible_row_count(ctx.hr_roller, 3);
-    lv_obj_set_style_border_side(ctx.hr_roller, LV_BORDER_SIDE_FULL, LV_PART_MAIN);
-    lv_obj_set_style_border_width(ctx.hr_roller, 2, LV_PART_MAIN);
-    lv_obj_align(ctx.hr_roller, LV_ALIGN_CENTER, 50, 0);
+    lv_roller_set_options(ctx.hr_roller, ctx.hr_roller_data, LV_ROLLER_MODE_NORMAL);
+    lv_roller_set_visible_row_count(ctx.hr_roller, 2);
+    lv_obj_align_to(ctx.hr_roller, lv_msgbox_get_text(ctx.msgbox), LV_ALIGN_OUT_BOTTOM_MID, -GUI_SET_TIME_POPUP_ROLLER_OFFSET_X, 0);
+
+    /* Create colon */
+    lv_obj_t *colon = lv_label_create(lv_msgbox_get_content(ctx.msgbox));
+    lv_obj_set_style_text_font(colon, &lv_font_montserrat_36, LV_PART_MAIN);
+    lv_label_set_text(colon, ":");
+    lv_obj_align_to(colon, lv_msgbox_get_text(ctx.msgbox), LV_ALIGN_OUT_BOTTOM_MID, 0, GUI_SET_TIME_POPUP_COLON_OFFSET_Y);
 
     /* Create minute roller */
-    ctx.min_roller = lv_roller_create(ctx.msgbox);
+    ctx.min_roller = lv_roller_create(lv_msgbox_get_content(ctx.msgbox)); // TODO remove elastic scrolling
     lv_obj_set_style_text_font(ctx.min_roller, &lv_font_montserrat_36, LV_PART_MAIN);
-    lv_roller_set_options(ctx.min_roller , ctx.min_roller_data, LV_ROLLER_MODE_NORMAL);
-    lv_roller_set_visible_row_count(ctx.min_roller, 3);
-    lv_obj_set_style_border_side(ctx.min_roller, LV_BORDER_SIDE_FULL, LV_PART_MAIN);
-    lv_obj_set_style_border_width(ctx.min_roller, 2, LV_PART_MAIN);
-    lv_obj_align(ctx.min_roller, LV_ALIGN_CENTER, -50, 0);
+    lv_roller_set_options(ctx.min_roller, ctx.min_roller_data, LV_ROLLER_MODE_NORMAL);
+    lv_roller_set_visible_row_count(ctx.min_roller, 2);
+    lv_obj_clear_flag(ctx.min_roller, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    lv_obj_align_to(ctx.min_roller, lv_msgbox_get_text(ctx.msgbox), LV_ALIGN_OUT_BOTTOM_MID, GUI_SET_TIME_POPUP_ROLLER_OFFSET_X, 0);
 
-    /* Create buttons */
-    lv_obj_t *cancel_btn = lv_btn_create(ctx.msgbox);
-    lv_obj_add_event_cb(cancel_btn, gui_cancel_callback, LV_EVENT_CLICKED, NULL);
-    lv_obj_set_size(cancel_btn, 100, 50);
-    lv_obj_set_style_border_side(cancel_btn, LV_BORDER_SIDE_FULL, LV_PART_MAIN);
-    lv_obj_set_style_border_width(cancel_btn, 2, LV_PART_MAIN);
-    lv_obj_align(cancel_btn, LV_ALIGN_BOTTOM_LEFT, 0, 0);
-    lv_obj_t *cancel_btn_label = lv_label_create(cancel_btn);
-    lv_label_set_text(cancel_btn_label, "Cancel");
-    lv_obj_center(cancel_btn_label);
-
-    lv_obj_t *save_btn = lv_btn_create(ctx.msgbox);
-    lv_obj_add_event_cb(save_btn, gui_save_callback, LV_EVENT_CLICKED, NULL);
-    lv_obj_set_size(save_btn, 100, 50);
-    lv_obj_set_style_border_side(save_btn, LV_BORDER_SIDE_FULL, LV_PART_MAIN);
-    lv_obj_set_style_border_width(save_btn, 2, LV_PART_MAIN);
-    lv_obj_align(save_btn, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
-    lv_obj_t *save_btn_label = lv_label_create(save_btn);
-    lv_label_set_text(save_btn_label, "Save");
-    lv_obj_center(save_btn_label);
+    /* Style buttons */
+    lv_obj_set_flex_align(ctx.msgbox, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START); // Required for the buttons to be centered
+    lv_obj_set_style_bg_color(lv_msgbox_get_btns(ctx.msgbox), GUI_COLOR_LIGHT_GREY, LV_PART_ITEMS);
+    lv_obj_set_style_bg_opa(lv_msgbox_get_btns(ctx.msgbox), LV_OPA_COVER, LV_PART_ITEMS);
+    lv_obj_set_style_pad_column(lv_msgbox_get_btns(ctx.msgbox), GUI_SET_TIME_POPUP_BTNS_COL_PAD, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(lv_msgbox_get_btns(ctx.msgbox), GUI_SET_TIME_POPUP_BTNS_TOP_PAD, LV_PART_MAIN);
+    lv_obj_set_height(lv_msgbox_get_btns(ctx.msgbox), GUI_SET_TIME_POPUP_BTNS_HEIGHT);
 
     /* Set roller value based on current time */
     struct tm time;
@@ -122,24 +116,24 @@ static bool gui_create_roller_data(void)
     return true;
 }
 
-static void gui_cancel_callback(lv_event_t *event)
+static void gui_buttons_callback(lv_event_t *event)
 {
-    gui_set_time_popup_destroy();
-}
+    lv_obj_t *obj = lv_event_get_current_target(event);
 
-static void gui_save_callback(lv_event_t *event)
-{
-    /* Get ID instead of string to avoid conversion - it maps 1:1 in this case */
-    const uint16_t hr_set = lv_roller_get_selected(ctx.hr_roller);
-    const uint16_t min_set = lv_roller_get_selected(ctx.min_roller);
+    /* Save */
+    if (lv_msgbox_get_active_btn(obj) == 1) {
+        /* Get ID instead of string to avoid conversion - it maps 1:1 in this case */
+        const uint16_t hr_set = lv_roller_get_selected(ctx.hr_roller);
+        const uint16_t min_set = lv_roller_get_selected(ctx.min_roller);
 
-    /* Update time */
-    struct tm time;
-    real_time_clock_get_time(&time);
-    time.tm_hour = hr_set;
-    time.tm_min = min_set;
-    time.tm_sec = 0;
-    real_time_clock_set_time(&time);
+        /* Update time */
+        struct tm time;
+        real_time_clock_get_time(&time);
+        time.tm_hour = hr_set;
+        time.tm_min = min_set;
+        time.tm_sec = 0;
+        real_time_clock_set_time(&time);
+    }
 
     gui_set_time_popup_destroy();
 }

@@ -1,5 +1,6 @@
 #include "gui_status_bar.h"
 #include "gui_dimensions.h"
+#include "gui_colors.h"
 #include "gui_set_time_popup.h"
 #include "lvgl.h" 
 #include "real_time_clock.h"
@@ -28,11 +29,9 @@ void gui_status_bar_create(void)
     lv_obj_set_size(status_bar, GUI_DISPLAY_WIDTH, GUI_STATUS_BAR_HEIGHT);
     lv_obj_align(status_bar, LV_ALIGN_TOP_MID, 0, GUI_HORIZONTAL_MARGIN_TOP);
     lv_obj_set_style_border_side(status_bar, LV_BORDER_SIDE_BOTTOM, LV_PART_MAIN);
-    // lv_obj_set_style_bg_color(status_bar, lv_color_make(180, 180, 180), LV_PART_MAIN);
-    // lv_obj_set_style_bg_opa(status_bar, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_border_color(status_bar, lv_color_make(95, 96, 96), LV_PART_MAIN); // TODO define color
-    lv_obj_set_style_border_width(status_bar, 2, LV_PART_MAIN); // TODO define width
-    lv_obj_set_style_border_opa(status_bar, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_color(status_bar, GUI_COLOR_LIGHT_GREY, LV_PART_MAIN);
+    lv_obj_set_style_border_width(status_bar, GUI_STATUS_BAR_BORDER_WIDTH, LV_PART_MAIN);
+    lv_obj_clear_flag(status_bar, LV_OBJ_FLAG_SCROLLABLE);
 
     /* Create clock */
     ctx.clock_label = lv_label_create(status_bar);
@@ -51,7 +50,6 @@ void gui_status_bar_create(void)
     ctx.battery_icon = lv_label_create(status_bar);
     lv_obj_set_height(ctx.battery_icon, GUI_STATUS_BAR_HEIGHT);
     lv_obj_set_style_text_font(ctx.battery_icon, &lv_font_montserrat_28, LV_PART_MAIN);
-    lv_obj_align_to(ctx.battery_icon, ctx.battery_label, LV_ALIGN_OUT_LEFT_MID, GUI_BAT_ICON_OFFSET_X, GUI_BAT_ICON_OFFSET_Y);
 
     /* Create 1s update timer */
     ctx.update_timer = lv_timer_create(gui_status_bar_update_callback, 1000, NULL);
@@ -79,9 +77,9 @@ static void gui_status_bar_update_callback(lv_timer_t *timer)
     lv_label_set_text(ctx.clock_label, buffer);
 
     const uint8_t battery_percent = battery_get_percent();
-    gui_set_battery_icon(battery_percent);
     snprintf(buffer, sizeof(buffer), "%u%%", battery_percent);
     lv_label_set_text(ctx.battery_label, buffer);
+    gui_set_battery_icon(battery_percent);
     
     last_h = time.tm_hour;
     last_m = time.tm_min;
@@ -104,10 +102,10 @@ static void gui_set_battery_icon(uint8_t percent)
     else {
         lv_label_set_text(ctx.battery_icon, LV_SYMBOL_BATTERY_FULL);
     }
+    lv_obj_align_to(ctx.battery_icon, ctx.battery_label, LV_ALIGN_OUT_LEFT_MID, GUI_BAT_ICON_OFFSET_X, GUI_BAT_ICON_OFFSET_Y);
 }
 
 static void gui_clock_clicked_event_callback(lv_event_t *event)
 {
-    ESP_LOGI("", "Creating window...");
     gui_set_time_popup_create();
 }

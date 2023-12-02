@@ -217,7 +217,12 @@ static eink_err_t lvgl_display_init(void)
 	lvgl_ctx.disp_drv.ver_res = EINK_DISPLAY_WIDTH;
 
     /* Register display driver */
-    lv_disp_drv_register(&lvgl_ctx.disp_drv);
+    lv_disp_t *disp = lv_disp_drv_register(&lvgl_ctx.disp_drv);
+
+    /* Initialize default theme */
+    if (lv_theme_mono_is_inited() == false) {
+        disp->theme = lv_theme_mono_init(disp, false, LV_FONT_DEFAULT);
+    }
 
     return EINK_OK;
 }
