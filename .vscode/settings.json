@@ -34,6 +34,9 @@
         "i2c.h": "c",
         "lv_theme_basic.h": "c",
         "lv_theme_mono.h": "c",
-        "lv_theme_default.h": "c"
+        "lv_theme_default.h": "c",
+        "esp_vfs_fat.h": "c",
+        "spi_master.h": "c",
+        "gui_status_bar.h": "c"
     }
 }

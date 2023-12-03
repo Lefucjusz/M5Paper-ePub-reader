@@ -437,7 +437,7 @@ static esp_err_t eink_spi_config(void)
     const spi_device_interface_config_t dev_cfg = {
         .clock_speed_hz = EINK_SPI_CLOCK_SPEED_HZ,
         .mode = EINK_SPI_MODE,
-        .spics_io_num = -1, // Manual CS
+        .spics_io_num = GPIO_NUM_NC,
         .queue_size = 1
     };
 

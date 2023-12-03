@@ -2,9 +2,11 @@
 #include "lvgl.h"
 #include "i2c.h"
 #include "spi.h"
+#include "fatfs_sd.h"
 #include "battery.h"
 #include "real_time_clock.h"
 #include "gui_status_bar.h"
+#include "gui_files_list.h"
 #include <esp_log.h>
 #include <driver/gpio.h>
 
@@ -24,12 +26,17 @@ void app_main(void)
 
     ESP_ERROR_CHECK(i2c_init());
     ESP_ERROR_CHECK(spi_init());
+    ESP_ERROR_CHECK(real_time_clock_init());
 
-    real_time_clock_init();
+    ESP_ERROR_CHECK(fatfs_sd_init());
+
     battery_init();
     lvgl_task_init(); // TODO this should rather be gui_task
 
     gui_status_bar_create();
+    gui_files_list_create();
 
     lvgl_task_start();
+
+    // TODO perform cleanup somewhere
 }
