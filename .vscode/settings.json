@@ -39,6 +39,7 @@
         "spi_master.h": "c",
         "gui_status_bar.h": "c",
         "miniz.h": "c",
-        "diskio_impl.h": "c"
+        "diskio_impl.h": "c",
+        "map.h": "c"
     }
 }

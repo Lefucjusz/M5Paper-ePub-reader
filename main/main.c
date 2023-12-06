@@ -7,9 +7,10 @@
 #include "real_time_clock.h"
 #include "gui_status_bar.h"
 #include "gui_files_list.h"
-#include "miniz_test.h"
 #include <esp_log.h>
 #include <driver/gpio.h>
+
+#include "epub.h"
 
 void app_main(void)
 {
@@ -33,7 +34,7 @@ void app_main(void)
     battery_init();
     lvgl_task_init(); // TODO this should rather be gui_task
 
-    miniz_test();
+    epub_open("/sdcard/Vertical.epub");
 
     gui_status_bar_create();
     gui_files_list_create();

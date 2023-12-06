@@ -1,3 +1,3 @@
-idf_component_register(SRCS "miniz_test.c"
+idf_component_register(SRCS "epub.c" "epub_utils.c"
                        INCLUDE_DIRS "."
-                       PRIV_REQUIRES miniz lvgl)
+                       PRIV_REQUIRES miniz map mxml)
