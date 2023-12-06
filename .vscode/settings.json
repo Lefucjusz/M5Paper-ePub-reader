@@ -37,6 +37,8 @@
         "lv_theme_default.h": "c",
         "esp_vfs_fat.h": "c",
         "spi_master.h": "c",
-        "gui_status_bar.h": "c"
+        "gui_status_bar.h": "c",
+        "miniz.h": "c",
+        "diskio_impl.h": "c"
     }
 }

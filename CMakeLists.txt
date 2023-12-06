@@ -4,7 +4,12 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
-set(EXTRA_COMPONENT_DIRS components/bsp components/lvgl components/lvgl_task components/utils components/gui) # TODO not very clean, but I have no better idea for now
+set(EXTRA_COMPONENT_DIRS 
+    components/bsp
+    components/lvgl_task 
+    components/utils 
+    components/gui 
+    components/third_party) # TODO not very clean, but I have no better idea for now
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(M5Paper-LVGL)

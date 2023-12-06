@@ -7,6 +7,7 @@
 #include "real_time_clock.h"
 #include "gui_status_bar.h"
 #include "gui_files_list.h"
+#include "miniz_test.h"
 #include <esp_log.h>
 #include <driver/gpio.h>
 
@@ -22,16 +23,17 @@ void app_main(void)
 
     ESP_ERROR_CHECK(gpio_config(&gpio_cfg));
 
-    gpio_set_level(2, 1); // Power switch
+    gpio_set_level(2, 0); // Power switch
 
     ESP_ERROR_CHECK(i2c_init());
     ESP_ERROR_CHECK(spi_init());
     ESP_ERROR_CHECK(real_time_clock_init());
-
     ESP_ERROR_CHECK(fatfs_sd_init());
 
     battery_init();
     lvgl_task_init(); // TODO this should rather be gui_task
+
+    miniz_test();
 
     gui_status_bar_create();
     gui_files_list_create();
