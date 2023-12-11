@@ -40,6 +40,9 @@
         "gui_status_bar.h": "c",
         "miniz.h": "c",
         "diskio_impl.h": "c",
-        "map.h": "c"
+        "map.h": "c",
+        "fatfs_sd.h": "c",
+        "dir.h": "c",
+        "list": "c"
     }
 }

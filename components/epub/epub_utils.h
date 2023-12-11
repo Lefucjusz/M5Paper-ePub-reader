@@ -1,7 +1,6 @@
 #pragma once
 
 #include "map.h"
-#include "vec.h"
 #include <stdbool.h>
 
 /* Map of strings */
@@ -13,9 +12,3 @@ const char *map_str_get(map_str_t *map, const char *key);
 
 map_iter_t map_str_iter(map_str_t *map);
 const char *map_str_next(map_str_t *map, map_iter_t *iter);
-
-/* Vector of strings */
-void vec_str_create(vec_str_t *vec);
-void vec_str_destroy(vec_str_t *vec);
-
-bool vec_str_push(vec_str_t *vec, const char *str);

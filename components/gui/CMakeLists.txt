@@ -15,4 +15,5 @@ idf_component_register(
     eink 
     real_time_clock 
     battery
+    dir
 )

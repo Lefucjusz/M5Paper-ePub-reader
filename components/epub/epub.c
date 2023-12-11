@@ -2,6 +2,7 @@
 #include "epub_utils.h"
 #include "../third_party/miniz/miniz.h" // TODO fix this better way
 #include "mxml.h"
+#include "vector.h"
 #include <esp_log.h>
 
 #define EPUB_TAG "EPUB"
@@ -10,7 +11,7 @@ struct epub_ctx_t
 {
     mz_zip_archive zip;
     map_str_t manifest;
-    vec_str_t spine;
+    vector_t spine;
 };
 
 static struct epub_ctx_t epub_ctx;
@@ -57,7 +58,7 @@ epub_err_t epub_open(const char *path)
 epub_err_t epub_close(void)
 {
     map_str_destroy(&epub_ctx.manifest);
-    vec_str_destroy(&epub_ctx.spine);
+    vector_destroy(&epub_ctx.spine);
     if (!mz_zip_reader_end(&epub_ctx.zip)) {
         ESP_LOGE(EPUB_TAG, "Failed to close EPUB file");
         return EPUB_IO_ERROR;
@@ -165,11 +166,11 @@ static epub_err_t epub_parse_content_opf(const char *path)
         }
 
         /* Iterate through every item in spine and add it to the vector */
-        vec_str_create(&epub_ctx.spine);
+        vector_create(&epub_ctx.spine);
         for (mxml_node_t *item = mxmlGetFirstChild(spine_tag); item != NULL; item = mxmlGetNextSibling(item)) {
             const char *idref = mxmlElementGetAttr(item, "idref");
             if (idref != NULL) {
-                vec_str_push(&epub_ctx.spine, idref);
+                vector_push_string(&epub_ctx.spine, idref);
             }
         }
     } while (0);

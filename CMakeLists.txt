@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.5)
 set(EXTRA_COMPONENT_DIRS 
     components/bsp
     components/lvgl_task 
-    components/utils 
+    components/utils
     components/gui 
     components/third_party) # TODO not very clean, but I have no better idea for now
 
