@@ -35,6 +35,7 @@ void app_main(void)
     lvgl_task_init(); // TODO this should rather be gui_task
 
     epub_open("/sdcard/Vertical.epub");
+    epub_close();
 
     gui_status_bar_create();
     gui_files_list_create();

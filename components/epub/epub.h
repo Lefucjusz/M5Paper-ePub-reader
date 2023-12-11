@@ -7,6 +7,7 @@ typedef enum
     EPUB_IO_ERROR,
     EPUB_NO_MEMORY,
     EPUB_OUT_OF_RANGE,
+    EPUB_PARSING_ERROR,
     EPUB_GENERAL_ERROR
 } epub_err_t;
 
