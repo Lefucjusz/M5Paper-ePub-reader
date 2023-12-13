@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <esp_log.h>
 
 struct dir_ctx_t
 {
@@ -12,13 +13,14 @@ struct dir_ctx_t
 
 static struct dir_ctx_t dir_ctx;
 
-/* Private function prototypes */
 static int path_append(const char *name);
 static int path_remove(void);
+static int path_ascending_comparator(const void *p, const void *q);
+
 
 void dir_init(const char *root_path)
 {
-	strncpy(dir_ctx.path, root_path, sizeof(dir_ctx.path)-1); // TODO fix
+	strlcpy(dir_ctx.path, root_path, sizeof(dir_ctx.path));
 	dir_ctx.depth = 0;
 }
 
@@ -73,7 +75,7 @@ vector_t *dir_list(void)
     }
     closedir(dir);
 
-	// TODO add sorting
+	vec_sort(list, path_ascending_comparator);
 
 	return list;
 }
@@ -88,7 +90,7 @@ void dir_list_free(vector_t *list)
 	free(list);
 }
 
-/* Private function definitions */
+
 static int path_append(const char *name)
 {
 	const size_t cur_path_len = strlen(dir_ctx.path);
@@ -112,4 +114,12 @@ static int path_remove(void)
 	*last_slash = '\0';
 
 	return 0;
+}
+
+static int path_ascending_comparator(const void *p, const void *q)
+{
+	const struct dirent *entry_p = *(struct dirent **)p;
+	const struct dirent *entry_q = *(struct dirent **)q;
+
+	return strcmp(entry_p->d_name, entry_q->d_name); // TODO fix sorting numeric values
 }

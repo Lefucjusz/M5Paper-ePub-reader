@@ -43,6 +43,8 @@
         "map.h": "c",
         "fatfs_sd.h": "c",
         "dir.h": "c",
-        "list": "c"
+        "list": "c",
+        "stdbool.h": "c",
+        "vec.h": "c"
     }
 }

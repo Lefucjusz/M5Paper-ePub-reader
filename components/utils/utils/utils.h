@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string.h>
 
 /* Useful macros */
 #define BYTES_TO_BITS(x) ((x) * 8)
@@ -42,4 +43,10 @@ inline static uint8_t dec2bcd(uint8_t dec)
 inline static uint8_t bcd2dec(uint8_t bcd)
 {
 	return (((bcd >> 4) * 10) + (bcd & 0x0F));
+}
+
+inline static bool is_extension(const char *filename, const char *ext)
+{
+    const char *dot_ptr = strrchr(filename, '.');
+    return ((dot_ptr != NULL) && (strcasecmp(dot_ptr, ext) == 0));
 }

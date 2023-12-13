@@ -22,6 +22,7 @@ static void gui_set_battery_icon(uint8_t percent);
 static void gui_status_bar_update_callback(lv_timer_t *timer);
 static void gui_clock_clicked_event_callback(lv_event_t *event);
 
+
 void gui_status_bar_create(void)
 {
     /* Create status bar */
@@ -57,6 +58,7 @@ void gui_status_bar_create(void)
     /* Update status bar */
     gui_status_bar_update_callback(NULL);
 }
+
 
 static void gui_status_bar_update_callback(lv_timer_t *timer)
 {

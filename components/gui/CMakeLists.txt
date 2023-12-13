@@ -3,6 +3,7 @@ idf_component_register(
     "./files_list/gui_files_list.c"
     "./status_bar/gui_status_bar.c"
     "./popups/gui_set_time_popup.c"
+    "./popups/gui_unsupported_popup.c"
 
     INCLUDE_DIRS 
     "." 
@@ -16,4 +17,5 @@ idf_component_register(
     real_time_clock 
     battery
     dir
+    utils
 )

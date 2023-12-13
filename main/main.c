@@ -25,7 +25,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(gpio_config(&gpio_cfg));
 
-    gpio_set_level(2, 0); // Power switch
+    gpio_set_level(2, 1); // Power switch
 
     ESP_ERROR_CHECK(i2c_init());
     ESP_ERROR_CHECK(spi_init());
