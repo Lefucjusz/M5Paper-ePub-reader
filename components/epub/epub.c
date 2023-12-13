@@ -1,7 +1,7 @@
 #include "epub.h"
-#include "epub_utils.h"
 #include "../third_party/miniz/miniz.h" // TODO fix this better way
 #include "mxml.h"
+#include "map.h"
 #include "vector.h"
 #include <esp_log.h>
 
@@ -10,7 +10,6 @@
 struct epub_ctx_t
 {
     mz_zip_archive zip;
-    map_str_t manifest;
     vector_t spine;
 };
 
@@ -19,6 +18,7 @@ static struct epub_ctx_t epub_ctx;
 /* Private functions prototypes */
 static char *epub_get_content_opf_path(void);
 static epub_err_t epub_parse_content_opf(const char *path);
+// static epub_err_t epub_parse_toc_ncx();
    
 /* Public functions */
 epub_err_t epub_open(const char *path)
@@ -47,9 +47,9 @@ epub_err_t epub_open(const char *path)
     free(opf_path);
 
     size_t i;
-    char *item;
+    const char *item;
     vec_foreach(&epub_ctx.spine, item, i) {
-        ESP_LOGI(EPUB_TAG, "Item %zu: %s", i, item);
+        ESP_LOGI(EPUB_TAG, "%s", item);
     }
 
     return err;
@@ -57,7 +57,6 @@ epub_err_t epub_open(const char *path)
 
 epub_err_t epub_close(void)
 {
-    map_str_destroy(&epub_ctx.manifest);
     vector_destroy(&epub_ctx.spine);
     if (!mz_zip_reader_end(&epub_ctx.zip)) {
         ESP_LOGE(EPUB_TAG, "Failed to close EPUB file");
@@ -138,6 +137,8 @@ static epub_err_t epub_parse_content_opf(const char *path)
 
     /* Parse manifest and spine */
     epub_err_t err = EPUB_OK;
+    map_str_t manifest;
+    map_init(&manifest);
     do {
         /* Find manifest tag */
         mxml_node_t *manifest_tag = mxmlFindElement(opf_tree, opf_tree, "manifest", NULL, NULL, MXML_DESCEND);
@@ -147,13 +148,12 @@ static epub_err_t epub_parse_content_opf(const char *path)
             break;
         }
 
-        /* Iterate through every item in manifest and add it to the map TODO do it only for needed ones */
-        map_str_create(&epub_ctx.manifest);
+        /* Iterate through every item in manifest and add it to the map */
         for (mxml_node_t *item = mxmlGetFirstChild(manifest_tag); item != NULL; item = mxmlGetNextSibling(item)) {
             const char *id = mxmlElementGetAttr(item, "id");
             const char *href = mxmlElementGetAttr(item, "href");
             if ((id != NULL) && (href != NULL)) {
-                map_str_set(&epub_ctx.manifest, id, href);
+                map_set(&manifest, id, (char *)href); // Cast to suppress discarded qualifier warning
             }
         }
 
@@ -165,20 +165,22 @@ static epub_err_t epub_parse_content_opf(const char *path)
             break;
         }
 
-        /* Iterate through every item in spine and add it to the vector */
+        /* Iterate through every item in spine and add its path to spine vector */
         vector_create(&epub_ctx.spine);
         for (mxml_node_t *item = mxmlGetFirstChild(spine_tag); item != NULL; item = mxmlGetNextSibling(item)) {
             const char *idref = mxmlElementGetAttr(item, "idref");
             if (idref != NULL) {
-                vector_push_string(&epub_ctx.spine, idref);
+                char **item_path_ptr = map_get(&manifest, idref);
+                if (item_path_ptr != NULL) {
+                    vector_push_string(&epub_ctx.spine, *item_path_ptr);
+                }
             }
         }
     } while (0);
 
     /* Cleanup */
+    map_deinit(&manifest);
     mxmlDelete(opf_tree);
-    if (err) {
-        map_str_destroy(&epub_ctx.manifest);
-    }
+
     return err;
 }
