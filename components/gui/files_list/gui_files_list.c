@@ -2,7 +2,7 @@
 #include "gui_unsupported_popup.h"
 #include "lvgl.h"
 #include "dir.h"
-#include "utils.h"
+#include "path_utils.h"
 #include <esp_log.h>
 
 #define GUI_FILES_LIST_TAG "GUI_FILES_LIST"
