@@ -9,7 +9,7 @@
 
 struct gui_files_list_ctx_t
 {
-    vector_t *dirs;
+    dir_list_t *dirs;
     lv_obj_t *list_files;
 };
 

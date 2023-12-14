@@ -56,13 +56,13 @@ const char *dir_get_fs_path(void)
 	return dir_ctx.path;
 }
 
-vector_t *dir_list(void)
+dir_list_t *dir_list(void)
 {
-	vector_t *list = malloc(sizeof(vector_t));
+	dir_list_t *list = malloc(sizeof(dir_list_t));
 	if (list == NULL) {
 		return NULL;
 	}
-	vector_create(list);
+	cvec_create(list);
 
 	struct dirent *entry;
     DIR *dir = opendir(dir_ctx.path);
@@ -71,7 +71,7 @@ vector_t *dir_list(void)
     }
 
     while ((entry = readdir(dir)) != NULL) {
-		vector_push(list, entry, sizeof(*entry));
+		cvec_push(list, entry, sizeof(*entry));
     }
     closedir(dir);
 
@@ -80,13 +80,13 @@ vector_t *dir_list(void)
 	return list;
 }
 
-void dir_list_free(vector_t *list)
+void dir_list_free(dir_list_t *list)
 {
 	if (list == NULL) {
 		return;
 	}
 	
-	vector_destroy(list);
+	cvec_destroy(list);
 	free(list);
 }
 

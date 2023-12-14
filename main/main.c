@@ -37,6 +37,7 @@ void app_main(void)
     battery_init();
     lvgl_task_init(); // TODO this should rather be gui_task
 
+    // epub_open("/sdcard/huxley-limbo.epub");
     epub_open("/sdcard/Vertical.epub");
     epub_close();
 
