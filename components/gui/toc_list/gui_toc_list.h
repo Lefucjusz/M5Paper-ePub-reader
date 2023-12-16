@@ -2,7 +2,7 @@
 
 #include "gui_dimensions.h"
 #include "gui_status_bar.h" // TODO this should not be included here...
-#include "vec.h"
+#include "epub.h"
 
 #define GUI_TOC_BAR_MARGIN_TOP 2
 #define GUI_TOC_BAR_WIDTH GUI_SCREEN_WIDTH
@@ -16,4 +16,4 @@
 #define GUI_TOC_LIST_BUTTON_PAD_TOP 20
 #define GUI_TOC_LIST_BUTTON_PAD_BOTTOM 20
 
-void gui_toc_list_create(const vec_void_t *toc);
+void gui_toc_list_create(epub_t *epub);

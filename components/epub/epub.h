@@ -1,6 +1,8 @@
 #pragma once
 
 #include "vec.h"
+#include "../third_party/miniz/miniz.h" // TODO fix this better way
+#include "epub_toc_entry.h"
 
 typedef enum
 {
@@ -19,9 +21,16 @@ typedef enum
     EPUB_NEXT
 } epub_direction_t;
 
-epub_err_t epub_open(const char *path);
-epub_err_t epub_close(void);
+typedef struct
+{
+    mz_zip_archive zip;
+    vec_void_t spine;
+    vec_void_t toc;
+} epub_t;
 
-vec_void_t *epub_get_toc(void);
+epub_err_t epub_open(epub_t *epub, const char *path);
+epub_err_t epub_close(epub_t *epub);
+
+const vec_void_t *epub_get_toc(epub_t *epub);
 
 // epub_err_t epub_get_section(epub_direction_t direction, void *section_data); // TODO section_data should be some proper type

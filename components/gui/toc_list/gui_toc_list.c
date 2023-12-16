@@ -1,6 +1,5 @@
 #include "gui_toc_list.h"
 #include "lvgl.h"
-#include "epub_toc_entry.h"
 #include <esp_log.h>
 
 #define TAG "GUI-TOC"
@@ -19,7 +18,7 @@ static gui_toc_list_ctx ctx;
 static void gui_toc_item_click_callback(lv_event_t *event);
 static void gui_back_button_click_callback(lv_event_t *event);
 
-void gui_toc_list_create(const vec_void_t *toc) // TODO pass around epub context instead of storing it locally in epub.c
+void gui_toc_list_create(epub_t *epub)
 {
     /* Create top bar */
     ctx.top_bar = lv_obj_create(lv_scr_act());
@@ -39,7 +38,7 @@ void gui_toc_list_create(const vec_void_t *toc) // TODO pass around epub context
     lv_obj_set_style_border_side(ctx.back_btn, LV_BORDER_SIDE_NONE, LV_PART_MAIN);
     lv_obj_set_height(ctx.back_btn, 50);
     lv_obj_align(ctx.back_btn, LV_ALIGN_LEFT_MID, GUI_TOC_BACK_BUTTON_OFFSET_X, 0);
-    lv_obj_add_event_cb(ctx.back_btn, gui_back_button_click_callback, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(ctx.back_btn, gui_back_button_click_callback, LV_EVENT_CLICKED, (void *)epub);
     
     /* Add back button icon */
     ctx.back_btn_icon = lv_label_create(ctx.back_btn);
@@ -54,6 +53,7 @@ void gui_toc_list_create(const vec_void_t *toc) // TODO pass around epub context
     lv_obj_clear_flag(ctx.toc_list, LV_OBJ_FLAG_SCROLL_ELASTIC);
 
     /* Fill the list with TOC items */
+    const vec_void_t *toc = epub_get_toc(epub);
     size_t i;
     epub_toc_entry_t *entry;
     vec_foreach(toc, entry, i) {
@@ -74,6 +74,9 @@ static void gui_toc_item_click_callback(lv_event_t *event)
 
 static void gui_back_button_click_callback(lv_event_t *event)
 {
+    epub_t *epub = (epub_t *)lv_event_get_user_data(event);
+    epub_close(epub);
+    
     lv_obj_del(ctx.top_bar);
     lv_obj_del(ctx.toc_list);
 }

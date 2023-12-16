@@ -1,6 +1,4 @@
 #include "epub.h"
-#include "epub_toc_entry.h"
-#include "../third_party/miniz/miniz.h" // TODO fix this better way
 #include "mxml.h"
 #include "map.h"
 #include "cvec.h"
@@ -9,36 +7,32 @@
 
 #define TAG "EPUB"
 
-typedef struct
-{
-    mz_zip_archive zip;
-    vec_void_t spine;
-    vec_void_t toc;
-} epub_ctx_t;
-
-static epub_ctx_t epub_ctx; // TODO maybe this should be a parameter?
-
 /* Private functions prototypes */
-static char *epub_get_content_opf_path(void);
+static char *epub_get_content_opf_path(epub_t *epub);
 static char *epub_get_root_path(const char *content_opf_path);
-static epub_err_t epub_parse_content_opf(const char *opf_path, const char *root_path, char **ncx_path);
-static epub_err_t epub_parse_toc_ncx(const char *toc_ncx_path, const char *root_path);
+static epub_err_t epub_parse_content_opf(epub_t *epub, const char *opf_path, const char *root_path, char **ncx_path);
+static epub_err_t epub_parse_toc_ncx(epub_t *epub, const char *toc_ncx_path, const char *root_path);
    
 /* Public functions */
-epub_err_t epub_open(const char *path)
+epub_err_t epub_open(epub_t *epub, const char *path)
 {
+    /* Sanity check */
+    if ((epub == NULL) || (path == NULL)) {
+        return EPUB_INVALID_ARG;
+    }
+
     epub_err_t err = EPUB_OK;
 
     /* Open file */
-    mz_zip_zero_struct(&epub_ctx.zip);
-    if (!mz_zip_reader_init_file(&epub_ctx.zip, path, 0)) {
+    mz_zip_zero_struct(&epub->zip);
+    if (!mz_zip_reader_init_file(&epub->zip, path, 0)) {
         ESP_LOGE(TAG, "Failed to open file '%s'", path);
         err = EPUB_IO_ERROR; // TODO add better error handling
         goto exit;
     }
 
     /* Get OPF file path */
-    char *opf_path = epub_get_content_opf_path();
+    char *opf_path = epub_get_content_opf_path(epub);
     if (opf_path == NULL) {
         ESP_LOGE(TAG, "Failed to get OPF file path");
         err = EPUB_GENERAL_ERROR;
@@ -55,7 +49,7 @@ epub_err_t epub_open(const char *path)
 
     /* Parse OPF file */
     char *toc_ncx_path = NULL;
-    err = epub_parse_content_opf(opf_path, root_path, &toc_ncx_path);
+    err = epub_parse_content_opf(epub, opf_path, root_path, &toc_ncx_path);
     if (err) {
         ESP_LOGE(TAG, "Failed to parse OPF file '%s'", opf_path);
         goto exit_opf_parse_fail;
@@ -64,7 +58,7 @@ epub_err_t epub_open(const char *path)
     opf_path = NULL;
 
     /* Parse NCX file */
-    err = epub_parse_toc_ncx(toc_ncx_path, root_path);
+    err = epub_parse_toc_ncx(epub, toc_ncx_path, root_path);
     if (err) {
         ESP_LOGE(TAG, "Failed to parse NCX file '%s'", toc_ncx_path);
         goto exit_ncx_parse_fail;
@@ -76,61 +70,63 @@ epub_err_t epub_open(const char *path)
 
     size_t i;
     const char *spine_entry;
-    vec_foreach(&epub_ctx.spine, spine_entry, i) {
+    vec_foreach(&epub->spine, spine_entry, i) {
         ESP_LOGI(TAG, "Spine entry %zu: %s", i, spine_entry);
     }
 
     epub_toc_entry_t *toc_entry;
-    vec_foreach(&epub_ctx.toc, toc_entry, i) {
+    vec_foreach(&epub->toc, toc_entry, i) {
         ESP_LOGI(TAG, "TOC entry %zu: %s | %s", i, toc_entry->title, toc_entry->path);
     }
 
     goto exit;
 
 exit_ncx_parse_fail:
-    cvec_destroy(&epub_ctx.spine);
+    cvec_destroy(&epub->spine);
     free(toc_ncx_path);
 exit_opf_parse_fail:
     free(root_path);
 exit_root_path_fail:    
     free(opf_path);
 exit_opf_path_fail:    
-    mz_zip_reader_end(&epub_ctx.zip);
+    mz_zip_reader_end(&epub->zip);
 exit:
     return err;
 }
 
-epub_err_t epub_close(void)
+epub_err_t epub_close(epub_t *epub)
 {
+    ESP_LOGI(TAG, "Closing epub file...");
+
     /* Clean up TOC */
     size_t i;
     epub_toc_entry_t *entry;
-    vec_foreach(&epub_ctx.toc, entry, i) {
+    vec_foreach(&epub->toc, entry, i) {
         epub_toc_entry_destroy(entry);
     }
 
     /* Clean up spine */
-    cvec_destroy(&epub_ctx.spine);
+    cvec_destroy(&epub->spine);
 
     /* Close EPUB */
-    if (!mz_zip_reader_end(&epub_ctx.zip)) {
+    if (!mz_zip_reader_end(&epub->zip)) {
         ESP_LOGE(TAG, "Failed to close EPUB file");
         return EPUB_IO_ERROR;
     }
     return EPUB_OK;
 }
 
-vec_void_t *epub_get_toc(void)
+const vec_void_t *epub_get_toc(epub_t *epub)
 {
-    return &epub_ctx.toc;
+    return &epub->toc;
 }
 
 /* Private functions definitions */
-static char *epub_get_content_opf_path(void)
+static char *epub_get_content_opf_path(epub_t *epub)
 {
     /* Read container file from the archive and parse it */
     const char *container_xml_path = "META-INF/container.xml";
-    char *container_xml_raw = mz_zip_reader_extract_file_to_heap(&epub_ctx.zip, container_xml_path, NULL, 0);
+    char *container_xml_raw = mz_zip_reader_extract_file_to_heap(&epub->zip, container_xml_path, NULL, 0);
     if (container_xml_raw == NULL) {
         ESP_LOGE(TAG, "Failed to extract '%s' from archive", container_xml_path);
         return NULL;
@@ -199,10 +195,10 @@ static char *epub_get_root_path(const char *content_opf_path)
     return root_path;
 }
 
-static epub_err_t epub_parse_content_opf(const char *opf_path, const char *root_path, char **ncx_path)
+static epub_err_t epub_parse_content_opf(epub_t *epub, const char *opf_path, const char *root_path, char **ncx_path)
 {
     /* Read OPF file and parse it */
-    char *opf_raw = mz_zip_reader_extract_file_to_heap(&epub_ctx.zip, opf_path, NULL, 0);
+    char *opf_raw = mz_zip_reader_extract_file_to_heap(&epub->zip, opf_path, NULL, 0);
     if (opf_raw == NULL) {
         ESP_LOGE(TAG, "Failed to extract '%s' from archive", opf_path);
         return EPUB_IO_ERROR;
@@ -254,7 +250,7 @@ static epub_err_t epub_parse_content_opf(const char *opf_path, const char *root_
         }
 
         /* Iterate through every item in spine */
-        cvec_create(&epub_ctx.spine);
+        cvec_create(&epub->spine);
         for (mxml_node_t *item = mxmlGetFirstChild(spine_tag); item != NULL; item = mxmlGetNextSibling(item)) {
             if (mxmlGetType(item) != MXML_ELEMENT) {
                 continue;
@@ -265,7 +261,7 @@ static epub_err_t epub_parse_content_opf(const char *opf_path, const char *root_
             char **item_path_ptr = map_get(&manifest, idref);
             if (item_path_ptr != NULL) {
                 char *path_full = path_concatenate(root_path, *item_path_ptr);
-                cvec_push_string(&epub_ctx.spine, path_full);
+                cvec_push_string(&epub->spine, path_full);
                 free(path_full);
             }
         }
@@ -278,10 +274,10 @@ static epub_err_t epub_parse_content_opf(const char *opf_path, const char *root_
     return err;
 }
 
-static epub_err_t epub_parse_toc_ncx(const char *toc_ncx_path, const char *root_path)
+static epub_err_t epub_parse_toc_ncx(epub_t *epub, const char *toc_ncx_path, const char *root_path)
 {
     /* Read NCX file and parse it */
-    char *ncx_raw = mz_zip_reader_extract_file_to_heap(&epub_ctx.zip, toc_ncx_path, NULL, 0);
+    char *ncx_raw = mz_zip_reader_extract_file_to_heap(&epub->zip, toc_ncx_path, NULL, 0);
     if (ncx_raw == NULL) {
         ESP_LOGE(TAG, "Failed to extract '%s' from archive", toc_ncx_path);
         return EPUB_IO_ERROR;
@@ -314,7 +310,7 @@ static epub_err_t epub_parse_toc_ncx(const char *toc_ncx_path, const char *root_
         }
 
         /* Iterate through every item in navMap and add it to the vector */
-        vec_init(&epub_ctx.toc);
+        vec_init(&epub->toc);
         for (mxml_node_t *item = mxmlGetFirstChild(navmap_tag); item != NULL; item = mxmlGetNextSibling(item)) {
             if (mxmlGetType(item) != MXML_ELEMENT) {
                 continue;
@@ -352,7 +348,7 @@ static epub_err_t epub_parse_toc_ncx(const char *toc_ncx_path, const char *root_
             char *path_full = path_concatenate(root_path, src_tag_data);
             epub_toc_entry_t *entry = epub_toc_entry_create(title, path_full);
             free(path_full);
-            vec_push(&epub_ctx.toc, entry);
+            vec_push(&epub->toc, entry);
         }
     } while (0);
 

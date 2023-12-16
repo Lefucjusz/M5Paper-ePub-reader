@@ -7,12 +7,13 @@
 #include "epub.h"
 #include <esp_log.h>
 
-#define GUI_FILES_LIST_TAG "GUI_FILES_LIST"
+#define GUI_FILES_LIST_TAG "GUI-FILES-LIST"
 
 struct gui_files_list_ctx_t
 {
     dir_list_t *dirs;
     lv_obj_t *list_files;
+    epub_t current_epub;
 };
 
 static struct gui_files_list_ctx_t ctx;
@@ -73,10 +74,10 @@ static void gui_supported_file_click_callback(lv_event_t *event)
 {
     const char *filename = (const char *)lv_event_get_user_data(event);
     char *filepath = path_concatenate(dir_get_fs_path(), filename);
-    epub_open(filepath);
+    epub_open(&ctx.current_epub, filepath); // TODO error handling
     free(filepath);
     
-    gui_toc_list_create(epub_get_toc());
+    gui_toc_list_create(&ctx.current_epub);
 }
 
 static void gui_unsupported_file_click_callback(lv_event_t *event)
