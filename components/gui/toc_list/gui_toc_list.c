@@ -15,9 +15,11 @@ typedef struct
 
 static gui_toc_list_ctx ctx;
 
+/* Private function prototypes */
 static void gui_toc_item_click_callback(lv_event_t *event);
 static void gui_back_button_click_callback(lv_event_t *event);
 
+/* Public functions */
 void gui_toc_list_create(epub_t *epub)
 {
     /* Create top bar */
@@ -67,6 +69,7 @@ void gui_toc_list_create(epub_t *epub)
     }
 }
 
+/* Private function definitions */
 static void gui_toc_item_click_callback(lv_event_t *event)
 {
     ESP_LOGW(TAG, "Not supported yet!");
@@ -76,7 +79,7 @@ static void gui_back_button_click_callback(lv_event_t *event)
 {
     epub_t *epub = (epub_t *)lv_event_get_user_data(event);
     epub_close(epub);
-    
+
     lv_obj_del(ctx.top_bar);
     lv_obj_del(ctx.toc_list);
 }

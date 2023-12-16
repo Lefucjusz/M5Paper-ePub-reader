@@ -96,6 +96,11 @@ exit:
 
 epub_err_t epub_close(epub_t *epub)
 {
+    /* Sanity check */
+    if (epub == NULL) {
+        return EPUB_INVALID_ARG;
+    }
+
     ESP_LOGI(TAG, "Closing epub file...");
 
     /* Clean up TOC */
@@ -118,6 +123,10 @@ epub_err_t epub_close(epub_t *epub)
 
 const vec_void_t *epub_get_toc(epub_t *epub)
 {
+    /* Sanity check */
+    if (epub == NULL) {
+        return NULL;
+    }
     return &epub->toc;
 }
 

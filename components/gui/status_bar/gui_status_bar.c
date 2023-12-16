@@ -18,11 +18,12 @@ struct gui_status_bar_ctx_t
 
 static struct gui_status_bar_ctx_t ctx;
 
+/* Private function prototypes */
 static void gui_set_battery_icon(uint8_t percent);
 static void gui_status_bar_update_callback(lv_timer_t *timer);
 static void gui_clock_clicked_event_callback(lv_event_t *event);
 
-
+/* Public functions */
 void gui_status_bar_create(void)
 {
     /* Create status bar */
@@ -59,7 +60,7 @@ void gui_status_bar_create(void)
     gui_status_bar_update_callback(NULL);
 }
 
-
+/* Private function definitions */
 static void gui_status_bar_update_callback(lv_timer_t *timer)
 {
     static int last_h = -1;
