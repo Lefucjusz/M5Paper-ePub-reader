@@ -3,7 +3,6 @@
 #include "../third_party/miniz/miniz.h" // TODO fix this better way
 #include "mxml.h"
 #include "map.h"
-#include "vec.h"
 #include "cvec.h"
 #include "path_utils.h"
 #include <esp_log.h>
@@ -17,7 +16,7 @@ typedef struct
     vec_void_t toc;
 } epub_ctx_t;
 
-static epub_ctx_t epub_ctx;
+static epub_ctx_t epub_ctx; // TODO maybe this should be a parameter?
 
 /* Private functions prototypes */
 static char *epub_get_content_opf_path(void);
@@ -119,6 +118,11 @@ epub_err_t epub_close(void)
         return EPUB_IO_ERROR;
     }
     return EPUB_OK;
+}
+
+vec_void_t *epub_get_toc(void)
+{
+    return &epub_ctx.toc;
 }
 
 /* Private functions definitions */

@@ -1,8 +1,10 @@
 #include "gui_files_list.h"
 #include "gui_unsupported_popup.h"
+#include "gui_toc_list.h"
 #include "lvgl.h"
 #include "dir.h"
 #include "path_utils.h"
+#include "epub.h"
 #include <esp_log.h>
 
 #define GUI_FILES_LIST_TAG "GUI_FILES_LIST"
@@ -69,7 +71,12 @@ static void gui_directory_click_callback(lv_event_t *event)
 
 static void gui_supported_file_click_callback(lv_event_t *event)
 {
-    ESP_LOGI(GUI_FILES_LIST_TAG, "TODO: supported file '%s' clicked", (const char *)lv_event_get_user_data(event));
+    const char *filename = (const char *)lv_event_get_user_data(event);
+    char *filepath = path_concatenate(dir_get_fs_path(), filename);
+    epub_open(filepath);
+    free(filepath);
+    
+    gui_toc_list_create(epub_get_toc());
 }
 
 static void gui_unsupported_file_click_callback(lv_event_t *event)

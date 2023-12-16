@@ -3,7 +3,7 @@
 #include "eink.h"
 #include <stdbool.h>
 
-#define LVGL_TASK_STACK_SIZE 4096 // bytes
+#define LVGL_TASK_STACK_SIZE 16384 // bytes
 #define LVGL_TASK_CORE_AFFINITY 1
 #define LVGL_TASK_NAME "lvgl_task"
 

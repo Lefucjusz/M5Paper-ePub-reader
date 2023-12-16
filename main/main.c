@@ -8,6 +8,7 @@
 #include "real_time_clock.h"
 #include "gui_status_bar.h"
 #include "gui_files_list.h"
+#include "gui_toc_list.h"
 #include <esp_log.h>
 #include <driver/gpio.h>
 
@@ -37,25 +38,25 @@ void app_main(void)
     battery_init();
     lvgl_task_init(); // TODO this should rather be gui_task
 
-    const char *files[] = {
-        "/sdcard/huxley-limbo.epub",
-        "/sdcard/Vertical.epub",
-        "/sdcard/huxley-eyeless-in-gaza.epub",
-        "/sdcard/huxley-heaven-hell.epub",
-        "/sdcard/Recepta_na_lepszy_klimat__Zdrowsze_miasta_dla_chorujacego_swiata.epub",
-        "/sdcard/Chimeryczny lokator - Roland Topor.epub"
-    };
+    // const char *files[] = {
+    //     "/sdcard/huxley-limbo.epub",
+    //     "/sdcard/Vertical.epub",
+    //     "/sdcard/huxley-eyeless-in-gaza.epub",
+    //     "/sdcard/huxley-heaven-hell.epub",
+    //     "/sdcard/Recepta_na_lepszy_klimat__Zdrowsze_miasta_dla_chorujacego_swiata.epub",
+    //     "/sdcard/Chimeryczny lokator - Roland Topor.epub"
+    // };
 
-    for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); ++i) {
-        epub_err_t err = epub_open(files[i]);
-        if (!err) {
-            epub_close();
-        }
-        else {
-            ESP_LOGE("", "Opening test failed");
-            break;
-        }
-    }
+    // for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); ++i) {
+    //     epub_err_t err = epub_open(files[i]);
+    //     if (!err) {
+    //         epub_close();
+    //     }
+    //     else {
+    //         ESP_LOGE("", "Opening test failed");
+    //         break;
+    //     }
+    // }
 
     // epub_err_t err = epub_open("/sdcard/huxley-limbo.epub");
     // epub_err_t err = epub_open("/sdcard/Vertical.epub");
@@ -64,6 +65,9 @@ void app_main(void)
     // }
 
     gui_status_bar_create();
+
+    // gui_toc_list_create();
+
     gui_files_list_create();
 
     lvgl_task_start();

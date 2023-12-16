@@ -1,5 +1,7 @@
 #pragma once
 
+#include "vec.h"
+
 typedef enum
 {
     EPUB_OK,
@@ -20,4 +22,6 @@ typedef enum
 epub_err_t epub_open(const char *path);
 epub_err_t epub_close(void);
 
-epub_err_t epub_get_section(epub_direction_t direction, void *section_data); // TODO section_data should be some proper type
+vec_void_t *epub_get_toc(void);
+
+// epub_err_t epub_get_section(epub_direction_t direction, void *section_data); // TODO section_data should be some proper type
