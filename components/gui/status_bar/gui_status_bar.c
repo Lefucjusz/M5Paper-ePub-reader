@@ -76,7 +76,7 @@ static void gui_status_bar_update_callback(lv_timer_t *timer)
 
     /* Refresh data */
     char buffer[16];
-    snprintf(buffer, sizeof(buffer), "%02d:%02d", time.tm_hour, time.tm_min);
+    snprintf(buffer, sizeof(buffer), "%d:%02d", time.tm_hour, time.tm_min);
     lv_label_set_text(ctx.clock_label, buffer);
 
     const uint8_t battery_percent = battery_get_percent();

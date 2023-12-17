@@ -26,7 +26,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(gpio_config(&gpio_cfg));
 
-    gpio_set_level(2, 1); // Power switch
+    gpio_set_level(2, 0); // Power switch
 
     ESP_ERROR_CHECK(i2c_init());
     ESP_ERROR_CHECK(spi_init());
@@ -38,36 +38,7 @@ void app_main(void)
     battery_init();
     lvgl_task_init(); // TODO this should rather be gui_task
 
-    // const char *files[] = {
-    //     "/sdcard/huxley-limbo.epub",
-    //     "/sdcard/Vertical.epub",
-    //     "/sdcard/huxley-eyeless-in-gaza.epub",
-    //     "/sdcard/huxley-heaven-hell.epub",
-    //     "/sdcard/Recepta_na_lepszy_klimat__Zdrowsze_miasta_dla_chorujacego_swiata.epub",
-    //     "/sdcard/Chimeryczny lokator - Roland Topor.epub"
-    // };
-
-    // for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); ++i) {
-    //     epub_err_t err = epub_open(files[i]);
-    //     if (!err) {
-    //         epub_close();
-    //     }
-    //     else {
-    //         ESP_LOGE("", "Opening test failed");
-    //         break;
-    //     }
-    // }
-
-    // epub_err_t err = epub_open("/sdcard/huxley-limbo.epub");
-    // epub_err_t err = epub_open("/sdcard/Vertical.epub");
-    // if (!err) {
-    //     epub_close();
-    // }
-
     gui_status_bar_create();
-
-    // gui_toc_list_create();
-
     gui_files_list_create();
 
     lvgl_task_start();

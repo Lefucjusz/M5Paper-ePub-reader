@@ -6,20 +6,14 @@
 
 typedef enum
 {
-    EPUB_OK,
-    EPUB_INVALID_ARG,
-    EPUB_IO_ERROR,
-    EPUB_NO_MEMORY,
-    EPUB_OUT_OF_RANGE,
-    EPUB_PARSING_ERROR,
-    EPUB_GENERAL_ERROR
+    EPUB_OK = 0,
+    EPUB_INVALID_ARG = -1,
+    EPUB_IO_ERROR = -2,
+    EPUB_NO_MEMORY = -3,
+    EPUB_NOT_FOUND = -4,
+    EPUB_PARSING_ERROR = -5,
+    EPUB_GENERAL_ERROR = -6
 } epub_err_t;
-
-typedef enum 
-{
-    EPUB_PREVIOUS,
-    EPUB_NEXT
-} epub_direction_t;
 
 typedef struct
 {
@@ -33,4 +27,7 @@ epub_err_t epub_close(epub_t *epub);
 
 const vec_void_t *epub_get_toc(epub_t *epub);
 
-// epub_err_t epub_get_section(epub_direction_t direction, void *section_data); // TODO section_data should be some proper type
+ssize_t epub_get_spine_entry_index(epub_t *epub, const char *href);
+ssize_t epub_get_spine_size(epub_t *epub);
+
+char *epub_get_section_content(epub_t *epub, size_t spine_entry);

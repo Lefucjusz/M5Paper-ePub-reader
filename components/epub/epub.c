@@ -16,7 +16,6 @@ static epub_err_t epub_parse_toc_ncx(epub_t *epub, const char *toc_ncx_path, con
 /* Public functions */
 epub_err_t epub_open(epub_t *epub, const char *path)
 {
-    /* Sanity check */
     if ((epub == NULL) || (path == NULL)) {
         return EPUB_INVALID_ARG;
     }
@@ -35,7 +34,7 @@ epub_err_t epub_open(epub_t *epub, const char *path)
     char *opf_path = epub_get_content_opf_path(epub);
     if (opf_path == NULL) {
         ESP_LOGE(TAG, "Failed to get OPF file path");
-        err = EPUB_GENERAL_ERROR;
+        err = EPUB_PARSING_ERROR;
         goto exit_opf_path_fail;
     }
 
@@ -96,7 +95,6 @@ exit:
 
 epub_err_t epub_close(epub_t *epub)
 {
-    /* Sanity check */
     if (epub == NULL) {
         return EPUB_INVALID_ARG;
     }
@@ -109,6 +107,7 @@ epub_err_t epub_close(epub_t *epub)
     vec_foreach(&epub->toc, entry, i) {
         epub_toc_entry_destroy(entry);
     }
+    vec_deinit(&epub->toc);
 
     /* Clean up spine */
     cvec_destroy(&epub->spine);
@@ -123,11 +122,46 @@ epub_err_t epub_close(epub_t *epub)
 
 const vec_void_t *epub_get_toc(epub_t *epub)
 {
-    /* Sanity check */
     if (epub == NULL) {
         return NULL;
     }
     return &epub->toc;
+}
+
+ssize_t epub_get_spine_entry_index(epub_t *epub, const char *href)
+{
+    if ((epub == NULL) || (href == NULL)) {
+        return EPUB_INVALID_ARG;
+    }
+
+    size_t i;
+    const char *path;
+    vec_foreach(&epub->spine, path, i) {
+        if (strcmp(path, href) == 0) {
+            ESP_LOGI(TAG, "Found spine entry index '%zu' for href '%s'", i, href);
+            return i;
+        }
+    }
+    ESP_LOGI(TAG, "Spine entry index for href '%s' not found", href);
+    return EPUB_NOT_FOUND;
+}
+
+ssize_t epub_get_spine_size(epub_t *epub)
+{
+    if (epub == NULL) {
+        return EPUB_INVALID_ARG;
+    }
+    return epub->spine.length;
+}
+
+char *epub_get_section_content(epub_t *epub, size_t spine_entry)
+{
+    if ((epub == NULL) || (spine_entry >= epub_get_spine_size(epub))) {
+        return NULL;
+    }
+
+    const char *path = epub->spine.data[spine_entry];
+    return mz_zip_reader_extract_file_to_heap(&epub->zip, path, NULL, 0);
 }
 
 /* Private functions definitions */
@@ -348,7 +382,7 @@ static epub_err_t epub_parse_toc_ncx(epub_t *epub, const char *toc_ncx_path, con
                 break;
             }
             const char *src_tag_data = mxmlElementGetAttr(content_tag, "src");
-            char *anchor_start = strrchr(src_tag_data, '#');
+            char *anchor_start = strrchr(src_tag_data, '#'); // TODO anchor-based navigation is not supported yet
 
             /* Add to TOC */
             if (anchor_start != NULL) {
