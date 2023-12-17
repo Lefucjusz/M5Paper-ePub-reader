@@ -2,6 +2,9 @@
 #include "lvgl.h"
 #include <esp_log.h>
 
+#include "gui_page.h"
+#include "epub_section.h"
+
 #define TAG "GUI-TOC"
 
 typedef struct
@@ -30,7 +33,7 @@ void gui_toc_list_create(epub_t *epub)
     /* Create top bar */
     ctx.top_bar = lv_obj_create(lv_scr_act());
     lv_obj_set_size(ctx.top_bar, GUI_TOC_BAR_WIDTH, GUI_TOC_BAR_HEIGHT);
-    lv_obj_align(ctx.top_bar, LV_ALIGN_TOP_MID, 0, GUI_TOC_BAR_OFFSET_X);
+    lv_obj_align(ctx.top_bar, LV_ALIGN_TOP_MID, 0, GUI_TOC_BAR_OFFSET_Y);
     lv_obj_set_style_border_side(ctx.top_bar, LV_BORDER_SIDE_BOTTOM, LV_PART_MAIN);
     lv_obj_clear_flag(ctx.top_bar, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -85,8 +88,13 @@ static void gui_toc_item_click_callback(lv_event_t *event)
     ESP_LOGI(TAG, "Entry href: %s", entry->path);
     ESP_LOGI(TAG, "Entry spine index: %zu", epub_get_spine_entry_index(ctx.current_epub, entry->path));
     char *content = epub_get_section_content(ctx.current_epub, epub_get_spine_entry_index(ctx.current_epub, entry->path));
-    ESP_LOGI(TAG, "Entry content: %s", content);
+    // ESP_LOGI(TAG, "Entry content: %s", content);
+    // gui_page_create();
+    // content[4096] = '\0';
+    // gui_page_update("");
+    vec_void_t *section = epub_section_parse(content);
     free(content);
+    gui_page_create(section);
 }
 
 static void gui_back_button_click_callback(lv_event_t *event)

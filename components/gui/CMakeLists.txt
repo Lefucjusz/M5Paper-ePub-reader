@@ -6,6 +6,7 @@ idf_component_register(
     "./status_bar/gui_status_bar.c"
     "./popups/gui_set_time_popup.c"
     "./popups/gui_unsupported_popup.c"
+    "./page/gui_page.c"
 
     INCLUDE_DIRS 
     "." 
@@ -13,6 +14,7 @@ idf_component_register(
     "./toc_list"
     "./status_bar" 
     "./popups"
+    "./page"
 
     PRIV_REQUIRES 
     lvgl 
