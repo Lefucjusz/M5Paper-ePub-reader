@@ -46,6 +46,7 @@
         "list": "c",
         "stdbool.h": "c",
         "vec.h": "c",
-        "cvec.h": "c"
+        "cvec.h": "c",
+        "epub.h": "c"
     }
 }

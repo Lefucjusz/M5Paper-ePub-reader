@@ -1,5 +1,6 @@
 idf_component_register(
     SRCS 
+    "./gui.c"
     "./files_list/gui_files_list.c"
     "./toc_list/gui_toc_list.c"
     "./status_bar/gui_status_bar.c"
@@ -8,7 +9,7 @@ idf_component_register(
 
     INCLUDE_DIRS 
     "." 
-    "./files_list" 
+    "./files_list"
     "./toc_list"
     "./status_bar" 
     "./popups"

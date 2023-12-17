@@ -34,7 +34,7 @@ void gui_files_list_create(void)
 
     ctx.list_files = lv_list_create(lv_scr_act());
     lv_obj_set_size(ctx.list_files, GUI_FILES_LIST_WIDTH, GUI_FILES_LIST_HEIGHT);
-    lv_obj_align(ctx.list_files, LV_ALIGN_TOP_MID, 0, GUI_FILES_LIST_OFFSET_X);
+    lv_obj_align(ctx.list_files, LV_ALIGN_TOP_MID, 0, GUI_FILES_LIST_OFFSET_Y);
     lv_obj_clear_flag(ctx.list_files, LV_OBJ_FLAG_SCROLL_ELASTIC);
 
     gui_reload_list();
