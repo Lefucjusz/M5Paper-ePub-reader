@@ -47,6 +47,8 @@
         "stdbool.h": "c",
         "vec.h": "c",
         "cvec.h": "c",
-        "epub.h": "c"
+        "epub.h": "c",
+        "epub_section.h": "c",
+        "random": "c"
     }
 }

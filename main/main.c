@@ -7,6 +7,7 @@
 #include "dir.h"
 #include "real_time_clock.h"
 #include "gui.h"
+#include "gui_page.h"
 #include <esp_log.h>
 #include <driver/gpio.h>
 
@@ -22,7 +23,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(gpio_config(&gpio_cfg));
 
-    gpio_set_level(2, 0); // Power switch
+    gpio_set_level(2, 1); // Power switch
 
     ESP_ERROR_CHECK(i2c_init());
     ESP_ERROR_CHECK(spi_init());
@@ -35,6 +36,7 @@ void app_main(void)
     lvgl_task_init(); // TODO this should rather be gui_task
 
     gui_create();
+    // gui_page_create(NULL, 0);
    
     lvgl_task_start();
 

@@ -80,21 +80,14 @@ void gui_toc_list_create(epub_t *epub)
 /* Private function definitions */
 static void gui_toc_item_click_callback(lv_event_t *event)
 {
-    // ESP_LOGW(TAG, "Not supported yet!");
-
     epub_toc_entry_t *entry = lv_event_get_user_data(event);
+    const ssize_t spine_index = epub_get_spine_entry_index(ctx.current_epub, entry->path);
 
     ESP_LOGI(TAG, "Entry title: %s", entry->title);
     ESP_LOGI(TAG, "Entry href: %s", entry->path);
-    ESP_LOGI(TAG, "Entry spine index: %zu", epub_get_spine_entry_index(ctx.current_epub, entry->path));
-    char *content = epub_get_section_content(ctx.current_epub, epub_get_spine_entry_index(ctx.current_epub, entry->path));
-    // ESP_LOGI(TAG, "Entry content: %s", content);
-    // gui_page_create();
-    // content[4096] = '\0';
-    // gui_page_update("");
-    vec_void_t *section = epub_section_parse(content);
-    free(content);
-    gui_page_create(section);
+    ESP_LOGI(TAG, "Entry spine index: %zu", spine_index);
+
+    gui_page_create(ctx.current_epub, spine_index);
 }
 
 static void gui_back_button_click_callback(lv_event_t *event)

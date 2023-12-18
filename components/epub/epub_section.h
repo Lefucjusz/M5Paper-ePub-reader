@@ -1,18 +1,9 @@
 #pragma once
 
 #include "vec.h"
+#include "epub_text_block.h"
 
-typedef enum
-{
-    EPUB_FONT_NORMAL,
-    EPUB_FONT_BOLD
-} epub_font_type_t;
+typedef vec_void_t epub_section_t;
 
-typedef struct
-{
-    char *data;
-    epub_font_type_t type;
-} epub_paragraph_t;
-
-vec_void_t *epub_section_parse(const char *raw);
-void epub_section_destroy(vec_void_t *section);
+epub_section_t *epub_section_create(const char *raw_text);
+void epub_section_destroy(epub_section_t *section);

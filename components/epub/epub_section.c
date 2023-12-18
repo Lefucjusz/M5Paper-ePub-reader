@@ -8,23 +8,34 @@ static void sax_callback(mxml_node_t *node, mxml_sax_event_t event, void *data);
 static bool is_heading(const char *element);
 static bool is_paragraph(const char *element);
 
-vec_void_t *epub_section_parse(const char *raw)
+epub_section_t *epub_section_create(const char *raw_text)
 {
-    vec_void_t *section = malloc(sizeof(vec_void_t));
+    if (raw_text == NULL) {
+        return NULL;
+        
+    }
+    epub_section_t *section = malloc(sizeof(epub_section_t));
+    if (section == NULL) {
+        return NULL;
+    }
     vec_init(section);
-    mxml_node_t *tree = mxmlSAXLoadString(NULL, raw, MXML_OPAQUE_CALLBACK, sax_callback, (void *)section);
+
+    mxml_node_t *tree = mxmlSAXLoadString(NULL, raw_text, MXML_OPAQUE_CALLBACK, sax_callback, (void *)section);
     mxmlDelete(tree);
 
     return section;
 }
 
-void epub_section_destroy(vec_void_t *section)
+void epub_section_destroy(epub_section_t *section)
 {
+    if (section == NULL) {
+        return;
+    }
+
     size_t i;
-    epub_paragraph_t *paragraph;
-    vec_foreach(section, paragraph, i) {
-        free(paragraph->data);
-        free(paragraph);
+    epub_text_block_t *block;
+    vec_foreach(section, block, i) {
+        epub_text_block_destroy(block);
     }
 }
 
@@ -35,7 +46,6 @@ static void sax_callback(mxml_node_t *node, mxml_sax_event_t event, void *data)
 
     switch (event) {
         case MXML_SAX_ELEMENT_OPEN:
-            // ESP_LOGI("", "Got opening element %s", mxmlGetElement(node));
             if (is_heading(mxmlGetElement(node))) {
                 heading = true;
             } 
@@ -44,24 +54,18 @@ static void sax_callback(mxml_node_t *node, mxml_sax_event_t event, void *data)
             }
             break;
         case MXML_SAX_DATA:
-            if (heading) {
-                // ESP_LOGI("", "Got heading: '%s'", mxmlGetOpaque(node));
-                epub_paragraph_t *par = malloc(sizeof(epub_paragraph_t));
-                par->data = malloc(strlen(mxmlGetOpaque(node)) + 1);
-                memcpy(par->data, mxmlGetOpaque(node), strlen(mxmlGetOpaque(node)) + 1);
-                par->type = EPUB_FONT_BOLD;
-                vec_push((vec_void_t *)data, par);
+            if (paragraph) {
+                epub_text_block_t *block = epub_text_block_create(mxmlGetOpaque(node), EPUB_FONT_NORMAL);
+                epub_section_t *section = (epub_section_t *)data;
+                vec_push(section, block);
             }
-            else if (paragraph) {
-                epub_paragraph_t *par = malloc(sizeof(epub_paragraph_t));
-                par->data = malloc(strlen(mxmlGetOpaque(node)) + 1);
-                memcpy(par->data, mxmlGetOpaque(node), strlen(mxmlGetOpaque(node)) + 1);
-                par->type = EPUB_FONT_NORMAL;
-                vec_push((vec_void_t *)data, par);
+            else if (heading) {
+                epub_text_block_t *block = epub_text_block_create(mxmlGetOpaque(node), EPUB_FONT_BOLD);
+                epub_section_t *section = (epub_section_t *)data;
+                vec_push(section, block);
             }
             break;
         case MXML_SAX_ELEMENT_CLOSE:
-            // ESP_LOGI("", "Got closing element %s", mxmlGetElement(node));
             if (is_heading(mxmlGetElement(node))) {
                 heading = false;
             } 

@@ -120,7 +120,7 @@ epub_err_t epub_close(epub_t *epub)
     return EPUB_OK;
 }
 
-const vec_void_t *epub_get_toc(epub_t *epub)
+const epub_toc_t *epub_get_toc(epub_t *epub)
 {
     if (epub == NULL) {
         return NULL;
@@ -162,6 +162,16 @@ char *epub_get_section_content(epub_t *epub, size_t spine_entry)
 
     const char *path = epub->spine.data[spine_entry];
     return mz_zip_reader_extract_file_to_heap(&epub->zip, path, NULL, 0);
+}
+
+epub_section_t *epub_get_section(epub_t *epub, size_t spine_entry)
+{
+    char *section_content = epub_get_section_content(epub, spine_entry);
+    if (section_content == NULL) {
+        return NULL;
+    }
+
+    return epub_section_create(section_content);
 }
 
 /* Private functions definitions */
