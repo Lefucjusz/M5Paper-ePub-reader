@@ -7,7 +7,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/timers.h>
 
-struct lvgl_ctx_t
+typedef struct
 {
     lv_disp_draw_buf_t disp_buf;
 	lv_color_t draw_buf[LVGL_DRAW_BUFFER_SIZE];
@@ -18,9 +18,9 @@ struct lvgl_ctx_t
     uint8_t fast_refresh_count;
     TimerHandle_t eink_sleep_timer;
     bool is_eink_awake;
-};
+} lvgl_ctx_t;
 
-static struct lvgl_ctx_t EXT_RAM_BSS_ATTR lvgl_ctx;
+static lvgl_ctx_t EXT_RAM_BSS_ATTR ctx;
 
 /* Private functions declarations */
 static void lvgl_transform_pixel_map(lv_color_t *px_map, size_t size);
@@ -47,7 +47,7 @@ void lvgl_task_init(void)
     lv_init();
 
     /* Create LVGL task semaphore */
-    lvgl_ctx.lvgl_task_semaphore = xSemaphoreCreateMutex();
+    ctx.lvgl_task_semaphore = xSemaphoreCreateMutex();
 
     /* Initialize hardware */
     lvgl_display_init(); // TODO error handling
@@ -64,36 +64,36 @@ void lvgl_task_start(void)
 
 bool lvgl_task_acquire(void)
 {
-    return xSemaphoreTake(lvgl_ctx.lvgl_task_semaphore, portMAX_DELAY);
+    return xSemaphoreTake(ctx.lvgl_task_semaphore, portMAX_DELAY);
 }
 
 void lvgl_task_release(void)
 {
-    xSemaphoreGive(lvgl_ctx.lvgl_task_semaphore);
+    xSemaphoreGive(ctx.lvgl_task_semaphore);
 }
 
 /* Private functions */
 static void lvgl_reset_refresh_mode(void)
 {
     /* Default refresh mode */
-    lvgl_ctx.refresh_mode = EINK_UPDATE_MODE_A2;
+    ctx.refresh_mode = EINK_UPDATE_MODE_A2;
 }
 
 static void lvgl_update_refresh_mode(uint8_t px_brightness)
 {
     /* The most capable refresh mode already required, return */
-    if (lvgl_ctx.refresh_mode == EINK_UPDATE_MODE_GC16) {
+    if (ctx.refresh_mode == EINK_UPDATE_MODE_GC16) {
         return;
     }
 
     /* If not handled by A2 */
     if ((px_brightness != EINK_PIXEL_BLACK) && (px_brightness != EINK_PIXEL_WHITE)) {
         if ((px_brightness == EINK_PIXEL_DARK_GRAY_DU4) || (px_brightness == EINK_PIXEL_LIGHT_GRAY_DU4)) {
-            lvgl_ctx.refresh_mode = EINK_UPDATE_MODE_DU4; // Can be handled by DU4
+            ctx.refresh_mode = EINK_UPDATE_MODE_DU4; // Can be handled by DU4
         }
         else {
             ESP_LOGW("", "%d", px_brightness);
-            lvgl_ctx.refresh_mode = EINK_UPDATE_MODE_GC16; // Can be handled only by GC16
+            ctx.refresh_mode = EINK_UPDATE_MODE_GC16; // Can be handled only by GC16
         }
     }
 }
@@ -139,15 +139,15 @@ static void lvgl_transform_pixel_map(lv_color_t *px_map, size_t size)
 
 static void lvgl_refresh_screen(void)
 {
-    if ((lvgl_ctx.refresh_mode == EINK_UPDATE_MODE_GC16) || (lvgl_ctx.fast_refresh_count >= LVGL_FAST_PER_DEEP_REFRESHES)) {
+    if ((ctx.refresh_mode == EINK_UPDATE_MODE_GC16) || (ctx.fast_refresh_count >= LVGL_FAST_PER_DEEP_REFRESHES)) {
         ESP_LOGI("", "Refreshing with GC16");
         eink_refresh_full(EINK_UPDATE_MODE_GC16);
-        lvgl_ctx.fast_refresh_count = 0;
+        ctx.fast_refresh_count = 0;
     }
     else {
-        ESP_LOGI("", "Refreshing with %s", lvgl_ctx.refresh_mode == EINK_UPDATE_MODE_DU4 ? "DU4" : "A2");
-        eink_refresh_full(lvgl_ctx.refresh_mode);
-        ++lvgl_ctx.fast_refresh_count;
+        ESP_LOGI("", "Refreshing with %s", ctx.refresh_mode == EINK_UPDATE_MODE_DU4 ? "DU4" : "A2");
+        eink_refresh_full(ctx.refresh_mode);
+        ++ctx.fast_refresh_count;
     }
 }
 
@@ -172,7 +172,7 @@ static void lvgl_on_display_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area
         last_refresh = current_refresh;
     }
 
-    lv_disp_flush_ready(&lvgl_ctx.disp_drv);
+    lv_disp_flush_ready(&ctx.disp_drv);
 }
 
 static void lvgl_coords_rounder(lv_disp_drv_t *disp_drv, lv_area_t *area)
@@ -184,7 +184,7 @@ static void lvgl_coords_rounder(lv_disp_drv_t *disp_drv, lv_area_t *area)
 
 static void lvgl_on_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
 {
-    struct touch_panel_coords_t coords;
+    touch_panel_coords_t coords;
     touch_get_coords(&coords);
 
     data->point.x = coords.x;
@@ -195,29 +195,29 @@ static void lvgl_on_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
 static eink_err_t lvgl_display_init(void)
 {
     /* Set initial state */
-    lvgl_ctx.fast_refresh_count = 0;
-    lvgl_ctx.is_eink_awake = true;
+    ctx.fast_refresh_count = 0;
+    ctx.is_eink_awake = true;
     lvgl_reset_refresh_mode();
 
     /* Initialize eink hardware */
     const eink_err_t err = eink_init(EINK_ROTATION_90, EINK_COLOR_NORMAL);
-    if (unlikely(err != EINK_OK)) {
+    if (err) {
        return err;
     }
 
     /* Initialize display buffer */
-    lv_disp_draw_buf_init(&lvgl_ctx.disp_buf, &lvgl_ctx.draw_buf, NULL, LVGL_DRAW_BUFFER_SIZE);
+    lv_disp_draw_buf_init(&ctx.disp_buf, &ctx.draw_buf, NULL, LVGL_DRAW_BUFFER_SIZE);
 
     /* Create display driver */
-    lv_disp_drv_init(&lvgl_ctx.disp_drv);
-    lvgl_ctx.disp_drv.draw_buf = &lvgl_ctx.disp_buf;
-    lvgl_ctx.disp_drv.flush_cb = lvgl_on_display_flush;
-    lvgl_ctx.disp_drv.rounder_cb = lvgl_coords_rounder;
-	lvgl_ctx.disp_drv.hor_res = EINK_DISPLAY_HEIGHT;
-	lvgl_ctx.disp_drv.ver_res = EINK_DISPLAY_WIDTH;
+    lv_disp_drv_init(&ctx.disp_drv);
+    ctx.disp_drv.draw_buf = &ctx.disp_buf;
+    ctx.disp_drv.flush_cb = lvgl_on_display_flush;
+    ctx.disp_drv.rounder_cb = lvgl_coords_rounder;
+	ctx.disp_drv.hor_res = EINK_DISPLAY_HEIGHT;
+	ctx.disp_drv.ver_res = EINK_DISPLAY_WIDTH;
 
     /* Register display driver */
-    lv_disp_t *disp = lv_disp_drv_register(&lvgl_ctx.disp_drv);
+    lv_disp_t *disp = lv_disp_drv_register(&ctx.disp_drv);
 
     /* Initialize default theme */
     if (lv_theme_mono_is_inited() == false) {
@@ -230,16 +230,16 @@ static eink_err_t lvgl_display_init(void)
 static touch_panel_err_t lvgl_touch_init(void)
 {
     const touch_panel_err_t err = touch_panel_init(TOUCH_PANEL_ROTATION_90);
-    if (unlikely(err != TOUCH_PANEL_OK)) {
+    if (err) {
         return err;
     }
 
-    lv_indev_drv_init(&lvgl_ctx.indev_drv);
-    lvgl_ctx.indev_drv.type = LV_INDEV_TYPE_POINTER; // Touchpad
-	lvgl_ctx.indev_drv.read_cb = lvgl_on_input_read;
+    lv_indev_drv_init(&ctx.indev_drv);
+    ctx.indev_drv.type = LV_INDEV_TYPE_POINTER; // Touchpad
+	ctx.indev_drv.read_cb = lvgl_on_input_read;
 
     /* Register input device driver */
-	lv_indev_drv_register(&lvgl_ctx.indev_drv);
+	lv_indev_drv_register(&ctx.indev_drv);
 
     return TOUCH_PANEL_OK;
 }
@@ -254,11 +254,11 @@ static esp_err_t lvgl_tick_timer_init(void)
     esp_timer_handle_t timer;
 
     esp_err_t err = esp_timer_create(&timer_args, &timer);
-    if (unlikely(err != ESP_OK)) {
+    if (err) {
         return err;
     }
     err = esp_timer_start_periodic(timer, LVGL_TICK_TIMER_PERIOD_MS * 1000);
-    if (unlikely(err != ESP_OK)) {
+    if (err) {
         esp_timer_delete(timer);
         return err;
     }
@@ -267,11 +267,11 @@ static esp_err_t lvgl_tick_timer_init(void)
 
 static esp_err_t lvgl_eink_sleep_timer_init(void)
 {
-    lvgl_ctx.eink_sleep_timer = xTimerCreate(LVGL_SLEEP_TIMER_NAME, pdMS_TO_TICKS(LVGL_SLEEP_TIMER_PERIOD_MS), pdFALSE, NULL, lvgl_eink_sleep_timer_callback);
-    if (unlikely(lvgl_ctx.eink_sleep_timer == NULL)) {
+    ctx.eink_sleep_timer = xTimerCreate(LVGL_SLEEP_TIMER_NAME, pdMS_TO_TICKS(LVGL_SLEEP_TIMER_PERIOD_MS), pdFALSE, NULL, lvgl_eink_sleep_timer_callback);
+    if (ctx.eink_sleep_timer == NULL) {
         return ESP_FAIL;
     }
-    if (unlikely(xTimerStart(lvgl_ctx.eink_sleep_timer, 0) != pdPASS)) {
+    if (xTimerStart(ctx.eink_sleep_timer, 0) != pdPASS) {
         return ESP_FAIL;
     }
     return ESP_OK;
@@ -280,17 +280,17 @@ static esp_err_t lvgl_eink_sleep_timer_init(void)
 static eink_err_t lvgl_eink_wakeup(void)
 {
     /* Restart sleep timer */
-    xTimerReset(lvgl_ctx.eink_sleep_timer, 0);
+    xTimerReset(ctx.eink_sleep_timer, 0);
 
     /* If eink asleep - wake it up */
-    if (!lvgl_ctx.is_eink_awake) {
+    if (!ctx.is_eink_awake) {
         ESP_LOGI("", "Waking up eink!");
         const esp_err_t err = eink_wakeup();
-        if (unlikely(err != ESP_OK)) {
+        if (err) {
             ESP_LOGE("", "Failed to wakeup eink: %d", err);
             return err;
         }
-        lvgl_ctx.is_eink_awake = true;
+        ctx.is_eink_awake = true;
     }
 
     return ESP_OK;
@@ -317,10 +317,10 @@ static void lvgl_eink_sleep_timer_callback(TimerHandle_t timer)
     ESP_LOGI("", "Putting eink to sleep!");
 
     const eink_err_t err = eink_sleep();
-    if (unlikely(err != EINK_OK)) {
+    if (err) {
         ESP_LOGE("", "Failed to put eink to sleep: %d", err);
         return;
     }
 
-    lvgl_ctx.is_eink_awake = false;
+    ctx.is_eink_awake = false;
 }

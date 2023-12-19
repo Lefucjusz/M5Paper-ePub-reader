@@ -1,5 +1,4 @@
 #include "lvgl_task.h"
-#include "lvgl.h"
 #include "i2c.h"
 #include "spi.h"
 #include "fatfs_sd.h"
@@ -7,8 +6,6 @@
 #include "dir.h"
 #include "real_time_clock.h"
 #include "gui.h"
-#include "gui_page.h"
-#include <esp_log.h>
 #include <driver/gpio.h>
 
 void app_main(void)
@@ -36,7 +33,6 @@ void app_main(void)
     lvgl_task_init(); // TODO this should rather be gui_task
 
     gui_create();
-    // gui_page_create(NULL, 0);
    
     lvgl_task_start();
 

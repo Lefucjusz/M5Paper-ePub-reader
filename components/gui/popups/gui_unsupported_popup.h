@@ -1,7 +1,5 @@
 #pragma once
 
-#include "lvgl.h"
-
 #define GUI_UNSUPPORTED_POPUP_TITLE LV_SYMBOL_WARNING" Unsupported file"
 #define GUI_UNSUPPORTED_POPUP_MAX_MSG_LENGTH 128
 #define GUI_UNSUPPORTED_POPUP_BORDER_WIDTH 2

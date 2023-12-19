@@ -2,21 +2,19 @@
 #include "gui_dimensions.h"
 #include "gui_colors.h"
 #include "gui_set_time_popup.h"
-#include "lvgl.h" 
+#include "gui_fonts.h"
 #include "real_time_clock.h"
 #include "battery.h"
-#include <time.h>
-#include <esp_log.h>
 
-struct gui_status_bar_ctx_t
+typedef struct
 {
     lv_obj_t *clock_label;
     lv_obj_t *battery_icon;
     lv_obj_t *battery_label;
     lv_timer_t *update_timer;
-};
+} gui_status_bar_ctx_t;
 
-static struct gui_status_bar_ctx_t ctx;
+static gui_status_bar_ctx_t ctx;
 
 /* Private function prototypes */
 static void gui_set_battery_icon(uint8_t percent);
@@ -45,13 +43,13 @@ void gui_status_bar_create(void)
     /* Create battery label */
     ctx.battery_label = lv_label_create(status_bar);
     lv_obj_set_height(ctx.battery_label, GUI_STATUS_BAR_HEIGHT);
-    lv_obj_set_style_text_font(ctx.battery_label, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_set_style_text_font(ctx.battery_label, &gui_montserrat_medium_20, LV_PART_MAIN);
     lv_obj_align(ctx.battery_label, LV_ALIGN_RIGHT_MID, GUI_BAT_LABEL_OFFSET_X, GUI_BAT_LABEL_OFFSET_Y);
 
     /* Create battery icon */
     ctx.battery_icon = lv_label_create(status_bar);
     lv_obj_set_height(ctx.battery_icon, GUI_STATUS_BAR_HEIGHT);
-    lv_obj_set_style_text_font(ctx.battery_icon, &lv_font_montserrat_28, LV_PART_MAIN);
+    lv_obj_set_style_text_font(ctx.battery_icon, &gui_montserrat_medium_28, LV_PART_MAIN);
 
     /* Create 1s update timer */
     ctx.update_timer = lv_timer_create(gui_status_bar_update_callback, 1000, NULL);

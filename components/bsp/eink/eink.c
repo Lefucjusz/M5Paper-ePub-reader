@@ -7,16 +7,16 @@
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
-struct eink_ctx_t
+typedef struct
 {
     spi_device_handle_t spi;
     eink_rotation_t rotation;
     eink_color_t color;
     SemaphoreHandle_t hrdy_semaphore;
     uint8_t *spi_buffer; // 32-bit aligned DMA accessible buffer used for SPI transfer
-};
+} eink_ctx_t;
 
-static struct eink_ctx_t eink_ctx;
+static eink_ctx_t eink_ctx;
 
 /* Private functions forward declarations */
 static esp_err_t spi_transfer(const void *tx_buffer, void *rx_buffer, size_t size);

@@ -7,6 +7,12 @@ idf_component_register(
     "./popups/gui_set_time_popup.c"
     "./popups/gui_unsupported_popup.c"
     "./page/gui_page.c"
+    "./fonts/gui_montserrat_medium_20.c"
+    "./fonts/gui_montserrat_medium_24.c"
+    "./fonts/gui_montserrat_medium_28.c"
+    "./fonts/gui_montserrat_medium_30.c"
+    "./fonts/gui_montserrat_medium_36.c"
+    "./fonts/gui_montserrat_medium_44.c"
 
     INCLUDE_DIRS 
     "." 
@@ -15,6 +21,7 @@ idf_component_register(
     "./status_bar" 
     "./popups"
     "./page"
+    "./fonts"
 
     PRIV_REQUIRES 
     lvgl 

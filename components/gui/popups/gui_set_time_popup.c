@@ -1,8 +1,7 @@
 #include "gui_set_time_popup.h"
 #include "gui_colors.h"
-#include "lvgl.h"
+#include "gui_fonts.h"
 #include "real_time_clock.h"
-#include <esp_log.h>
 #include <stdio.h>
 
 #define GUI_SET_TIME_POPUP_TITLE (LV_SYMBOL_SETTINGS" Set time")
@@ -13,16 +12,16 @@
 #define GUI_HR_ROLLER_DATA_SIZE (GUI_HOURS_PER_DAY * 3 + 1) // 24 * (2 digits + '\n') + '\0'
 #define GUI_MIN_ROLLER_DATA_SIZE (GUI_MINUTES_PER_HOUR * 3 + 1) // 60 * (2 digits + '\n') + '\0'
 
-struct gui_set_time_popup_ctx 
+typedef struct 
 {
     lv_obj_t *msgbox;
     lv_obj_t *hr_roller;
     lv_obj_t *min_roller;
     char *hr_roller_data;
     char *min_roller_data;
-};
+} gui_set_time_popup_ctx;
 
-static struct gui_set_time_popup_ctx ctx;
+static gui_set_time_popup_ctx ctx;
 static const char *button_labels[] = {"Cancel", "Save", NULL};
 
 static bool gui_create_roller_data(void);
@@ -33,7 +32,7 @@ void gui_set_time_popup_create(void)
     /* Create message box */
     ctx.msgbox = lv_msgbox_create(NULL, GUI_SET_TIME_POPUP_TITLE, " ", button_labels, false);
     lv_obj_add_event_cb(ctx.msgbox, gui_buttons_callback, LV_EVENT_CLICKED, NULL);
-    lv_obj_set_style_text_font(lv_msgbox_get_title(ctx.msgbox), &lv_font_montserrat_36, LV_PART_MAIN);
+    lv_obj_set_style_text_font(lv_msgbox_get_title(ctx.msgbox), &gui_montserrat_medium_36, LV_PART_MAIN);
     lv_obj_set_style_bg_color(lv_msgbox_get_title(ctx.msgbox), GUI_COLOR_LIGHT_GREY, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(lv_msgbox_get_title(ctx.msgbox), LV_OPA_COVER, LV_PART_MAIN); // TODO fix spacing
     lv_obj_set_width(ctx.msgbox, GUI_SET_TIME_POPUP_WIDTH);
@@ -44,20 +43,20 @@ void gui_set_time_popup_create(void)
 
     /* Create hour roller */
     ctx.hr_roller = lv_roller_create(lv_msgbox_get_content(ctx.msgbox)); // TODO remove elastic scrolling
-    lv_obj_set_style_text_font(ctx.hr_roller, &lv_font_montserrat_36, LV_PART_MAIN);
+    lv_obj_set_style_text_font(ctx.hr_roller, &gui_montserrat_medium_36, LV_PART_MAIN);
     lv_roller_set_options(ctx.hr_roller, ctx.hr_roller_data, LV_ROLLER_MODE_NORMAL);
     lv_roller_set_visible_row_count(ctx.hr_roller, 2);
     lv_obj_align_to(ctx.hr_roller, lv_msgbox_get_text(ctx.msgbox), LV_ALIGN_OUT_BOTTOM_MID, -GUI_SET_TIME_POPUP_ROLLER_OFFSET_X, 0);
 
     /* Create colon */
     lv_obj_t *colon = lv_label_create(lv_msgbox_get_content(ctx.msgbox));
-    lv_obj_set_style_text_font(colon, &lv_font_montserrat_36, LV_PART_MAIN);
+    lv_obj_set_style_text_font(colon, &gui_montserrat_medium_36, LV_PART_MAIN);
     lv_label_set_text(colon, ":");
     lv_obj_align_to(colon, lv_msgbox_get_text(ctx.msgbox), LV_ALIGN_OUT_BOTTOM_MID, 0, GUI_SET_TIME_POPUP_COLON_OFFSET_Y);
 
     /* Create minute roller */
     ctx.min_roller = lv_roller_create(lv_msgbox_get_content(ctx.msgbox)); // TODO remove elastic scrolling
-    lv_obj_set_style_text_font(ctx.min_roller, &lv_font_montserrat_36, LV_PART_MAIN);
+    lv_obj_set_style_text_font(ctx.min_roller, &gui_montserrat_medium_36, LV_PART_MAIN);
     lv_roller_set_options(ctx.min_roller, ctx.min_roller_data, LV_ROLLER_MODE_NORMAL);
     lv_roller_set_visible_row_count(ctx.min_roller, 2);
     lv_obj_clear_flag(ctx.min_roller, LV_OBJ_FLAG_SCROLL_ELASTIC);

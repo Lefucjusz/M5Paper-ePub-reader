@@ -5,13 +5,13 @@
 #include <errno.h>
 #include <esp_log.h>
 
-struct dir_ctx_t
+typedef struct
 {
 	char path[PATH_MAX];
 	size_t depth;
-};
+} dir_ctx_t;
 
-static struct dir_ctx_t dir_ctx;
+static dir_ctx_t ctx;
 
 static int path_append(const char *name);
 static int path_remove(void);
@@ -20,13 +20,13 @@ static int path_ascending_comparator(const void *p, const void *q);
 
 void dir_init(const char *root_path)
 {
-	strlcpy(dir_ctx.path, root_path, sizeof(dir_ctx.path));
-	dir_ctx.depth = 0;
+	strlcpy(ctx.path, root_path, sizeof(ctx.path));
+	ctx.depth = 0;
 }
 
 bool dir_is_top(void)
 {
-	return (dir_ctx.depth == 0);
+	return (ctx.depth == 0);
 }
 
 int dir_enter(const char *name)
@@ -35,7 +35,7 @@ int dir_enter(const char *name)
 	if (ret) {
 		return ret;
 	}
-	dir_ctx.depth++;
+	ctx.depth++;
 
 	return 0;
 }
@@ -46,14 +46,14 @@ int dir_return(void)
 	if (ret) {
 		return ret;
 	}
-	dir_ctx.depth--;
+	ctx.depth--;
 
 	return 0;
 }
 
 const char *dir_get_fs_path(void)
 {
-	return dir_ctx.path;
+	return ctx.path;
 }
 
 dir_list_t *dir_list(void)
@@ -65,7 +65,7 @@ dir_list_t *dir_list(void)
 	cvec_create(list);
 
 	struct dirent *entry;
-    DIR *dir = opendir(dir_ctx.path);
+    DIR *dir = opendir(ctx.path);
     if (dir == NULL) {
         return NULL;
     }
@@ -93,24 +93,24 @@ void dir_list_free(dir_list_t *list)
 
 static int path_append(const char *name)
 {
-	const size_t cur_path_len = strlen(dir_ctx.path);
-	const size_t space_left = sizeof(dir_ctx.path) - cur_path_len;
+	const size_t cur_path_len = strlen(ctx.path);
+	const size_t space_left = sizeof(ctx.path) - cur_path_len;
 	if (strlen(name) >= space_left) {
 		return -ENAMETOOLONG;
 	}
 
-	snprintf(dir_ctx.path + cur_path_len, space_left, "/%s", name);
+	snprintf(ctx.path + cur_path_len, space_left, "/%s", name);
 
 	return 0;
 }
 
 static int path_remove(void)
 {
-	if (dir_ctx.depth == 0) {
+	if (ctx.depth == 0) {
 		return -ENOENT;
 	}
 
-	char *last_slash = strrchr(dir_ctx.path, '/');
+	char *last_slash = strrchr(ctx.path, '/');
 	*last_slash = '\0';
 
 	return 0;

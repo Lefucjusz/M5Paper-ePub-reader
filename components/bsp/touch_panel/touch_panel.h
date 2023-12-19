@@ -36,12 +36,12 @@ typedef enum
     TOUCH_PANEL_GENERAL_ERROR
 } touch_panel_err_t;
 
-struct touch_panel_coords_t
+typedef struct
 {
     uint16_t x;
     uint16_t y;
     touch_panel_state_t state;
-};
+} touch_panel_coords_t;
 
 touch_panel_err_t touch_panel_init(touch_panel_rotation_t rotation);
-touch_panel_err_t touch_get_coords(struct touch_panel_coords_t *coords);
+touch_panel_err_t touch_get_coords(touch_panel_coords_t *coords);

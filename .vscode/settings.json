@@ -49,6 +49,9 @@
         "cvec.h": "c",
         "epub.h": "c",
         "epub_section.h": "c",
-        "random": "c"
+        "random": "c",
+        "gui_toc_list.h": "c",
+        "gui_page.h": "c",
+        "gui_fonts.h": "c"
     }
 }

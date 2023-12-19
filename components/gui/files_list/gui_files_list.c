@@ -1,22 +1,21 @@
 #include "gui_files_list.h"
 #include "gui_unsupported_popup.h"
 #include "gui_toc_list.h"
-#include "lvgl.h"
+#include "gui_fonts.h"
 #include "dir.h"
 #include "path_utils.h"
 #include "epub.h"
-#include <esp_log.h>
 
 #define GUI_FILES_LIST_TAG "GUI-FILES-LIST"
 
-struct gui_files_list_ctx_t
+typedef struct
 {
     dir_list_t *dirs;
     lv_obj_t *list_files;
     epub_t current_epub;
-};
+} gui_files_list_ctx_t;
 
-static struct gui_files_list_ctx_t ctx;
+static gui_files_list_ctx_t ctx;
 
 /* Private function prototypes */
 static bool gui_is_directory(const struct dirent *entry);
@@ -74,10 +73,10 @@ static void gui_supported_file_click_callback(lv_event_t *event)
 {
     const char *filename = (const char *)lv_event_get_user_data(event);
     char *filepath = path_concatenate(dir_get_fs_path(), filename);
-    epub_open(&ctx.current_epub, filepath); // TODO error handling
+
+    gui_toc_list_create(filepath);
+
     free(filepath);
-    
-    gui_toc_list_create(&ctx.current_epub);
 }
 
 static void gui_unsupported_file_click_callback(lv_event_t *event)
@@ -101,7 +100,7 @@ static void gui_reload_list(void)
 	lv_obj_t *up_button;
 	if (!dir_is_top()) {
         up_button = lv_list_add_btn(ctx.list_files, LV_SYMBOL_DIRECTORY, "..");
-        lv_obj_set_style_text_font(up_button, &lv_font_montserrat_36, LV_PART_MAIN);
+        lv_obj_set_style_text_font(up_button, &gui_montserrat_medium_36, LV_PART_MAIN);
         lv_obj_set_style_pad_top(up_button, GUI_FILES_LIST_BUTTON_PAD_TOP, LV_PART_MAIN);
         lv_obj_set_style_pad_bottom(up_button, GUI_FILES_LIST_BUTTON_PAD_BOTTOM, LV_PART_MAIN);
         lv_obj_add_event_cb(up_button, gui_directory_up_click_callback, LV_EVENT_CLICKED, NULL);
@@ -116,7 +115,7 @@ static void gui_reload_list(void)
             lv_obj_add_event_cb(list_btn, gui_directory_click_callback, LV_EVENT_CLICKED, (void *)entry->d_name);
         }
         else if (gui_is_supported(entry)) {
-            list_btn = lv_list_add_btn(ctx.list_files, LV_SYMBOL_FILE, entry->d_name);
+            list_btn = lv_list_add_btn(ctx.list_files, GUI_SYMBOL_BOOK, entry->d_name);
             lv_obj_add_event_cb(list_btn, gui_supported_file_click_callback, LV_EVENT_CLICKED, (void *)entry->d_name);
         }
         else {
@@ -124,7 +123,7 @@ static void gui_reload_list(void)
             lv_obj_add_event_cb(list_btn, gui_unsupported_file_click_callback, LV_EVENT_CLICKED, (void *)entry->d_name);
         }
 
-        lv_obj_set_style_text_font(list_btn, &lv_font_montserrat_36, LV_PART_MAIN);
+        lv_obj_set_style_text_font(list_btn, &gui_montserrat_medium_36, LV_PART_MAIN);
         lv_obj_set_style_pad_top(list_btn, GUI_FILES_LIST_BUTTON_PAD_TOP, LV_PART_MAIN);
         lv_obj_set_style_pad_bottom(list_btn, GUI_FILES_LIST_BUTTON_PAD_BOTTOM, LV_PART_MAIN);
         lv_obj_t *list_btn_label = lv_obj_get_child(list_btn, lv_obj_get_child_cnt(list_btn) - 1); // Label is created as a last child

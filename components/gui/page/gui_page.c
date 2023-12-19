@@ -1,6 +1,5 @@
 #include "gui_page.h"
-#include "lvgl.h"
-#include "utils.h"
+#include "gui_fonts.h"
 #include <esp_log.h>
 
 #define TAG "GUI_PAGE"
@@ -49,6 +48,7 @@ void gui_page_create(epub_t *epub, size_t spine_index)
     lv_obj_set_size(ctx.page, GUI_PAGE_WIDTH, GUI_PAGE_HEIGHT);
     lv_obj_align(ctx.page, LV_ALIGN_TOP_MID, 0, GUI_PAGE_OFFSET_Y);
     lv_obj_set_style_pad_all(ctx.page, 0, LV_PART_MAIN);
+    lv_obj_set_style_border_side(ctx.page, LV_BORDER_SIDE_NONE, LV_PART_MAIN);
     lv_obj_clear_flag(ctx.page, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_clear_flag(ctx.page, LV_OBJ_FLAG_GESTURE_BUBBLE);
     lv_obj_add_event_cb(ctx.page, gui_page_swipe_callback, LV_EVENT_GESTURE, NULL);
@@ -67,11 +67,11 @@ static lv_obj_t *gui_page_add_block(const char *text, epub_font_type_t font_type
     lv_obj_set_style_text_line_space(label, GUI_PAGE_LINE_SPACING, LV_PART_MAIN);
     switch (font_type) {
         case EPUB_FONT_NORMAL:
-            lv_obj_set_style_text_font(label, &lv_font_montserrat_28, LV_PART_MAIN);
+            lv_obj_set_style_text_font(label, &gui_montserrat_medium_28, LV_PART_MAIN);
             break;
 
         case EPUB_FONT_BOLD:
-            lv_obj_set_style_text_font(label, &lv_font_montserrat_36, LV_PART_MAIN);
+            lv_obj_set_style_text_font(label, &gui_montserrat_medium_36, LV_PART_MAIN);
             break;
 
         default:
