@@ -17,6 +17,13 @@ epub_text_block_t *epub_text_block_create(const char *text, epub_font_type_t fon
     }
     memcpy(block->text, text, text_size);
 
+    /* Replace newlines with spaces */
+    for (size_t i = 0; i < text_size; ++i) {
+        if (block->text[i] == '\n') {
+            block->text[i] = ' ';
+        }
+    }
+
     block->font_type = font_type;
 
     return block;

@@ -6,7 +6,7 @@
 
 static void sax_callback(mxml_node_t *node, mxml_sax_event_t event, void *data);
 static bool is_heading(const char *element);
-static bool is_paragraph(const char *element);
+static bool is_block(const char *element);
 
 epub_section_t *epub_section_create(const char *raw_text)
 {
@@ -41,25 +41,25 @@ void epub_section_destroy(epub_section_t *section)
 
 static void sax_callback(mxml_node_t *node, mxml_sax_event_t event, void *data)
 {
-    static bool heading = false;
-    static bool paragraph = false;
+    static bool heading_found = false;
+    static bool block_found = false;
 
     switch (event) {
         case MXML_SAX_ELEMENT_OPEN:
             if (is_heading(mxmlGetElement(node))) {
-                heading = true;
+                heading_found = true;
             } 
-            else if (is_paragraph(mxmlGetElement(node))) {
-                paragraph = true;
+            else if (is_block(mxmlGetElement(node))) {
+                block_found = true;
             }
             break;
         case MXML_SAX_DATA:
-            if (paragraph) {
+            if (block_found) {
                 epub_text_block_t *block = epub_text_block_create(mxmlGetOpaque(node), EPUB_FONT_NORMAL);
                 epub_section_t *section = (epub_section_t *)data;
                 vec_push(section, block);
             }
-            else if (heading) {
+            else if (heading_found) {
                 epub_text_block_t *block = epub_text_block_create(mxmlGetOpaque(node), EPUB_FONT_BOLD);
                 epub_section_t *section = (epub_section_t *)data;
                 vec_push(section, block);
@@ -67,10 +67,10 @@ static void sax_callback(mxml_node_t *node, mxml_sax_event_t event, void *data)
             break;
         case MXML_SAX_ELEMENT_CLOSE:
             if (is_heading(mxmlGetElement(node))) {
-                heading = false;
+                heading_found = false;
             } 
-            else if (is_paragraph(mxmlGetElement(node))) {
-                paragraph = false;
+            else if (is_block(mxmlGetElement(node))) {
+                block_found = false;
             }
             break;
         default:
@@ -89,7 +89,13 @@ static bool is_heading(const char *element)
     return false;
 }
 
-static bool is_paragraph(const char *element)
+static bool is_block(const char *element)
 {
-    return (strcmp(element, "p") == 0);
+    static const char *blocks[]  = {"p", "div"};
+    for (size_t i = 0; i < ARRAY_SIZE(blocks); ++i) {
+        if (strcmp(element, blocks[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
