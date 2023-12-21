@@ -65,7 +65,7 @@ void gui_toc_list_create(const char *filepath)
     lv_obj_clear_flag(ctx.toc_list, LV_OBJ_FLAG_SCROLL_ELASTIC);
 
     /* Fill the list with TOC items */
-    const vec_void_t *toc = epub_get_toc(&ctx.current_epub);
+    const epub_toc_t *toc = epub_get_toc(&ctx.current_epub);
     size_t i;
     epub_toc_entry_t *entry;
     vec_foreach(toc, entry, i) {

@@ -2,7 +2,7 @@
 #include "gui_fonts.h"
 #include <esp_log.h>
 
-#define TAG "GUI_PAGE"
+#define TAG "GUI-PAGE"
 
 typedef enum
 {
@@ -12,23 +12,21 @@ typedef enum
 
 typedef struct
 {
-    lv_obj_t *page;
     epub_t *epub;
-    epub_section_t *section;
-
+    vec_void_t pages;
     size_t spine_index;
-    size_t block_index;
-    size_t block_offset_bytes;
-    size_t block_bytes_left;
+    size_t page_index;
 } gui_page_ctx_t;
 
 static gui_page_ctx_t ctx;
 
-static lv_obj_t *gui_page_add_block(const char *text, epub_font_type_t font_type);
+static lv_obj_t *gui_page_create_page(void);
+static lv_obj_t *gui_page_add_block(lv_obj_t *page, const char *text, epub_font_type_t font_type);
 static ssize_t gui_page_get_first_excess_char_index(lv_obj_t *block);
 static bool gui_page_is_book_end(void);
-static bool gui_page_is_section_end(void);
-static void gui_page_render(gui_page_direction_t direction);
+static bool gui_page_is_section_end(const epub_section_t *section, size_t block_index);
+static void gui_page_render_section(const epub_section_t *section);
+static void gui_page_destroy_section(void);
 static void gui_page_swipe_callback(lv_event_t *event);
 
 void gui_page_create(epub_t *epub, size_t spine_index)
@@ -39,28 +37,43 @@ void gui_page_create(epub_t *epub, size_t spine_index)
     }
 
     /* Initialize context */
-    memset(&ctx, 0, sizeof(ctx));
     ctx.epub = epub;
     ctx.spine_index = spine_index;
+    ctx.page_index = 0;
 
-    /* Create page object */
-    ctx.page = lv_obj_create(lv_scr_act());
-    lv_obj_set_size(ctx.page, GUI_PAGE_WIDTH, GUI_PAGE_HEIGHT);
-    lv_obj_align(ctx.page, LV_ALIGN_TOP_MID, 0, GUI_PAGE_OFFSET_Y);
-    lv_obj_set_style_pad_all(ctx.page, 0, LV_PART_MAIN);
-    lv_obj_set_style_border_side(ctx.page, LV_BORDER_SIDE_NONE, LV_PART_MAIN);
-    lv_obj_clear_flag(ctx.page, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_clear_flag(ctx.page, LV_OBJ_FLAG_GESTURE_BUBBLE);
-    lv_obj_add_event_cb(ctx.page, gui_page_swipe_callback, LV_EVENT_GESTURE, NULL);
+    /* Render pages for first section */
+    epub_section_t *section = epub_get_section(ctx.epub, ctx.spine_index);
+    gui_page_render_section(section);
+    epub_section_destroy(section);
 
-    /* Render the page */
-    gui_page_render(GUI_PAGE_NEXT);
+    /* Show first page */
+    lv_obj_t *first_page = ctx.pages.data[0];
+    lv_obj_clear_flag(first_page, LV_OBJ_FLAG_HIDDEN);
 }
 
-static lv_obj_t *gui_page_add_block(const char *text, epub_font_type_t font_type)
+static lv_obj_t *gui_page_create_page(void)
+{
+    ESP_LOGW(TAG, "Creating page...free heap %luB", esp_get_free_heap_size());
+    lv_obj_t *page = lv_obj_create(lv_scr_act());
+
+    lv_obj_set_size(page, GUI_PAGE_WIDTH, GUI_PAGE_HEIGHT);
+    lv_obj_align(page, LV_ALIGN_TOP_MID, 0, GUI_PAGE_OFFSET_Y);
+    lv_obj_set_style_pad_all(page, 0, LV_PART_MAIN);
+    lv_obj_set_style_border_side(page, LV_BORDER_SIDE_NONE, LV_PART_MAIN);
+    lv_obj_add_event_cb(page, gui_page_swipe_callback, LV_EVENT_GESTURE, NULL);
+    lv_obj_clear_flag(page, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(page, LV_OBJ_FLAG_GESTURE_BUBBLE);
+    lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN); // By default page should be invisible after creation
+
+    ESP_LOGW(TAG, "Page created...free heap %luB", esp_get_free_heap_size());
+
+    return page;
+}
+
+static lv_obj_t *gui_page_add_block(lv_obj_t *page, const char *text, epub_font_type_t font_type)
 {
     /* Add new block */
-    lv_obj_t *label = lv_label_create(ctx.page);
+    lv_obj_t *label = lv_label_create(page);
     lv_label_set_text(label, text);
     lv_obj_set_width(label, GUI_PAGE_WIDTH);
     lv_obj_set_style_pad_bottom(label, 0, LV_PART_MAIN); // Needed to maintain line spacing between blocks
@@ -79,15 +92,15 @@ static lv_obj_t *gui_page_add_block(const char *text, epub_font_type_t font_type
     }
     
     /* Align to previous block if exists */
-    if (lv_obj_get_child_cnt(ctx.page) > 1) {
+    if (lv_obj_get_child_cnt(page) > 1) {
         lv_obj_set_style_pad_top(label, GUI_PAGE_LINE_SPACING, LV_PART_MAIN); // Maintain line spacing between blocks
-        const size_t prev_label_index = lv_obj_get_child_cnt(ctx.page) - 2;
-        lv_obj_t *prev_label = lv_obj_get_child(ctx.page, prev_label_index);
+        const size_t prev_label_index = lv_obj_get_child_cnt(page) - 2;
+        lv_obj_t *prev_label = lv_obj_get_child(page, prev_label_index);
         lv_obj_align_to(label, prev_label, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
     }
 
     /* Force update coordinates */
-    lv_obj_update_layout(ctx.page);
+    lv_obj_update_layout(page);
 
     return label;
 }
@@ -119,58 +132,48 @@ static ssize_t gui_page_get_first_excess_char_index(lv_obj_t *block) // TODO thi
     return -1;
 }
 
+static bool gui_page_is_last_page_in_section(void)
+{
+    return (ctx.page_index >= ctx.pages.length);
+}
+
 static bool gui_page_is_book_end(void)
 {
     return (ctx.spine_index >= ctx.epub->spine.length);
 }
 
-static bool gui_page_is_section_end(void)
+static bool gui_page_is_section_end(const epub_section_t *section, size_t block_index)
 {
-    return (ctx.block_index >= ctx.section->length);
+    return (block_index >= section->length);
 }
 
-static void gui_page_render(gui_page_direction_t direction)
+static void gui_page_render_section(const epub_section_t *section)
 {
-    /* Clear page before drawing new one */
-    lv_obj_clean(ctx.page);
+    /* Initialize variables */
+    size_t block_index = 0;
+    size_t block_offset_bytes = 0;
+    size_t block_bytes_left = 0;
+    lv_obj_t *page = gui_page_create_page();
+    vec_init(&ctx.pages);
 
-    /* Reached end of book */
-    if (gui_page_is_book_end()) {
-        ESP_LOGW(TAG, "Detected end of book! Not supported yet");
-        return;
-    }
+    /* Create LVGL objects with rendered text blocks for entire section */
+    while (1) {
+        ESP_LOGW(TAG, "Entering loop");
+        const epub_text_block_t *epub_block = section->data[block_index];
+        char *text = &epub_block->text[block_offset_bytes];
 
-    /* Get new section if not initialized yet or at end of previous one */
-    if ((ctx.section == NULL) || gui_page_is_section_end()) {
-        epub_section_destroy(ctx.section);
-        ctx.section = epub_get_section(ctx.epub, ctx.spine_index);
-
-        ESP_LOGI(TAG, "Reading section %zu/%zu", ctx.spine_index, ctx.epub->spine.length);
-
-        // ctx.spine_index++;
-        ctx.block_index = 0;
-        ctx.block_offset_bytes = 0;
-        const epub_text_block_t *epub_block = ctx.section->data[0];
-        ctx.block_bytes_left = strlen(epub_block->text); // Get length of first block
-
-        ESP_LOGI(TAG, "Initial block_bytes_left: %zu", ctx.block_bytes_left);
-    }
-
-    /* Render new page */
-    bool page_full = false;
-    do {
-        const epub_text_block_t *epub_block = ctx.section->data[ctx.block_index];
-        char *text = &epub_block->text[ctx.block_offset_bytes];
-
-        lv_obj_t *new_gui_block = gui_page_add_block(text, epub_block->font_type);
+        lv_obj_t *new_gui_block = gui_page_add_block(page, text, epub_block->font_type);
         const ssize_t excess_char_index = gui_page_get_first_excess_char_index(new_gui_block);
 
         if (excess_char_index < 0) { // Entire block fits on page
-            ctx.block_bytes_left = 0;
+            block_bytes_left = 0;
         }
         else if (excess_char_index == 0) { // Not a single char fits
             lv_obj_del(new_gui_block);
-            page_full = true;
+
+            /* Add page to pages vector and create new one */
+            vec_push(&ctx.pages, page);
+            page = gui_page_create_page();
         }
         else if (excess_char_index > 0) { // Block fits partially
             lv_obj_del(new_gui_block);
@@ -181,33 +184,72 @@ static void gui_page_render(gui_page_direction_t direction)
             /* Temporarily terminate text array at last fitting char, add block to page and un-terminate */
             const char excess_byte = text[bytes_to_add];
             text[bytes_to_add] = '\0';
-            gui_page_add_block(text, epub_block->font_type);
+            gui_page_add_block(page, text, epub_block->font_type);
             text[bytes_to_add] = excess_byte;
 
             /* Update variables */
-            ctx.block_offset_bytes += bytes_to_add;
-            ctx.block_bytes_left -= bytes_to_add;
-            page_full = true;
+            block_offset_bytes += bytes_to_add;
+            block_bytes_left -= bytes_to_add;
+            
+            /* Add page to pages vector and create new one */
+            vec_push(&ctx.pages, page);
+            page = gui_page_create_page();
         }
 
-        if (ctx.block_bytes_left == 0) {
-            ctx.block_index++;
-            if (gui_page_is_section_end()) {
+        if (block_bytes_left == 0) {
+            block_index++;
+            if (gui_page_is_section_end(section, block_index)) {
                 ESP_LOGI(TAG, "Reached end of section %zu", ctx.spine_index);
-                ctx.spine_index++;
                 break; // Stop rendering loop
             }
             else {
-                ctx.block_offset_bytes = 0;
-                const epub_text_block_t *next_epub_block = ctx.section->data[ctx.block_index];
-                ctx.block_bytes_left = strlen(next_epub_block->text);
+                block_offset_bytes = 0;
+                const epub_text_block_t *next_epub_block = section->data[block_index];
+                block_bytes_left = strlen(next_epub_block->text);
             }
         }
-    } while (!page_full);
+    }
+}
+
+static void gui_page_destroy_section(void)
+{
+    size_t i;
+    lv_obj_t *page;
+    vec_foreach(&ctx.pages, page, i) {
+        lv_obj_del(page);
+    }
+    vec_deinit(&ctx.pages);
 }
 
 static void gui_page_swipe_callback(lv_event_t *event)
 {
-    ESP_LOGI(TAG, "Received swipe gesture %d!", lv_indev_get_gesture_dir(lv_indev_get_act()));
-    gui_page_render(GUI_PAGE_NEXT);
+    const lv_dir_t swipe_direction = lv_indev_get_gesture_dir(lv_indev_get_act());
+    ESP_LOGI(TAG, "Received swipe gesture %d!", swipe_direction);
+
+    switch (swipe_direction) {
+        case LV_DIR_LEFT: {
+            if (gui_page_is_last_page_in_section()) {
+                break;
+            }
+            lv_obj_add_flag(ctx.pages.data[ctx.page_index], LV_OBJ_FLAG_HIDDEN);
+            ctx.page_index++;
+            lv_obj_clear_flag(ctx.pages.data[ctx.page_index], LV_OBJ_FLAG_HIDDEN);
+        } break;
+
+        case LV_DIR_RIGHT: {
+            if (ctx.page_index == 0) {
+                break;
+            }
+            lv_obj_add_flag(ctx.pages.data[ctx.page_index], LV_OBJ_FLAG_HIDDEN);
+            ctx.page_index--;
+            lv_obj_clear_flag(ctx.pages.data[ctx.page_index], LV_OBJ_FLAG_HIDDEN);
+        } break;
+
+        default:
+            ESP_LOGW(TAG, "Unhandled swipe direction!");
+            break;
+    }
+
+    // gui_page_is_last_page_in_section
+    // gui_page_render(GUI_PAGE_NEXT);
 }

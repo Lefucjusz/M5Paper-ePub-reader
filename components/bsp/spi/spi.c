@@ -2,7 +2,7 @@
 
 esp_err_t spi_init(void)
 {
-    const spi_bus_config_t spi_cfg = { // TODO this should be moved outside like I2C
+    const spi_bus_config_t spi_cfg = {
         .miso_io_num = M5_SPI_MISO_PIN,
         .mosi_io_num = M5_SPI_MOSI_PIN,
         .sclk_io_num = M5_SPI_SCK_PIN,
