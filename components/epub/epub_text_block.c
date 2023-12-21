@@ -1,5 +1,4 @@
 #include "epub_text_block.h"
-
 #include <string.h>
 
 epub_text_block_t *epub_text_block_create(const char *text, epub_font_type_t font_type)
@@ -15,12 +14,14 @@ epub_text_block_t *epub_text_block_create(const char *text, epub_font_type_t fon
         free(block);
         return NULL;
     }
-    memcpy(block->text, text, text_size);
 
-    /* Replace newlines with spaces */
+    /* Copy text to block, replacing newlines with spaces */
     for (size_t i = 0; i < text_size; ++i) {
-        if (block->text[i] == '\n') {
+        if (text[i] == '\n') {
             block->text[i] = ' ';
+        }
+        else {
+            block->text[i] = text[i];
         }
     }
 

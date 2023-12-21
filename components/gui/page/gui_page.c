@@ -6,6 +6,7 @@
 
 typedef enum
 {
+    GUI_PAGE_FIRST,
     GUI_PAGE_PREVIOUS,
     GUI_PAGE_NEXT
 } gui_page_direction_t;
@@ -22,11 +23,17 @@ static gui_page_ctx_t ctx;
 
 static lv_obj_t *gui_page_create_page(void);
 static lv_obj_t *gui_page_add_block(lv_obj_t *page, const char *text, epub_font_type_t font_type);
-static ssize_t gui_page_get_first_excess_char_index(lv_obj_t *block);
+static ssize_t gui_page_get_first_excess_char_index(const lv_obj_t *block);
+
+static bool gui_page_is_at_first_page(void);
+static bool gui_page_is_at_last_page(void);
 static bool gui_page_is_book_end(void);
 static bool gui_page_is_section_end(const epub_section_t *section, size_t block_index);
+
 static void gui_page_render_section(const epub_section_t *section);
 static void gui_page_destroy_section(void);
+
+static void gui_page_turn(gui_page_direction_t direction);
 static void gui_page_swipe_callback(lv_event_t *event);
 
 void gui_page_create(epub_t *epub, size_t spine_index)
@@ -43,17 +50,18 @@ void gui_page_create(epub_t *epub, size_t spine_index)
 
     /* Render pages for first section */
     epub_section_t *section = epub_get_section(ctx.epub, ctx.spine_index);
+    uint32_t start = lv_tick_get();
     gui_page_render_section(section);
+    uint32_t end = lv_tick_get();
+    ESP_LOGW(TAG, "Rendering time %lums", end - start);
     epub_section_destroy(section);
 
     /* Show first page */
-    lv_obj_t *first_page = ctx.pages.data[0];
-    lv_obj_clear_flag(first_page, LV_OBJ_FLAG_HIDDEN);
+    gui_page_turn(GUI_PAGE_FIRST);
 }
 
 static lv_obj_t *gui_page_create_page(void)
 {
-    ESP_LOGW(TAG, "Creating page...free heap %luB", esp_get_free_heap_size());
     lv_obj_t *page = lv_obj_create(lv_scr_act());
 
     lv_obj_set_size(page, GUI_PAGE_WIDTH, GUI_PAGE_HEIGHT);
@@ -64,8 +72,6 @@ static lv_obj_t *gui_page_create_page(void)
     lv_obj_clear_flag(page, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_clear_flag(page, LV_OBJ_FLAG_GESTURE_BUBBLE);
     lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN); // By default page should be invisible after creation
-
-    ESP_LOGW(TAG, "Page created...free heap %luB", esp_get_free_heap_size());
 
     return page;
 }
@@ -105,13 +111,13 @@ static lv_obj_t *gui_page_add_block(lv_obj_t *page, const char *text, epub_font_
     return label;
 }
 
-static ssize_t gui_page_get_first_excess_char_index(lv_obj_t *block) // TODO this algorithm doesn't work every time
+static ssize_t gui_page_get_first_excess_char_index(const lv_obj_t *block) // TODO this algorithm doesn't work every time
 {
     lv_area_t area;
     lv_obj_get_coords(block, &area);
 
-    ESP_LOGI(TAG, "Last label position (%d; %d)", area.x1, area.y1);
-    ESP_LOGI(TAG, "Last label position end (%d; %d)", area.x2, area.y2);
+    // ESP_LOGI(TAG, "Last label position (%d; %d)", area.x1, area.y1);
+    // ESP_LOGI(TAG, "Last label position end (%d; %d)", area.x2, area.y2);
 
     const size_t block_end_y = area.y2;
     if (block_end_y <  GUI_MAIN_AREA_MAX_Y) {
@@ -126,13 +132,18 @@ static ssize_t gui_page_get_first_excess_char_index(lv_obj_t *block) // TODO thi
     };
 
     if (lv_label_is_char_under_pos(block, &point_excess)) {
-        ESP_LOGI(TAG, "Detected excess char at (%d; %d) -> %c (%lu)!", point_excess.x, point_excess.y, lv_label_get_text(block)[lv_label_get_letter_on(block, &point_excess)], lv_label_get_letter_on(block, &point_excess));
+        // ESP_LOGI(TAG, "Detected excess char at (%d; %d) -> %c (%lu)!", point_excess.x, point_excess.y, lv_label_get_text(block)[lv_label_get_letter_on(block, &point_excess)], lv_label_get_letter_on(block, &point_excess));
         return lv_label_get_letter_on(block, &point_excess);
     }
     return -1;
 }
 
-static bool gui_page_is_last_page_in_section(void)
+static bool gui_page_is_at_first_page(void)
+{
+    return (ctx.page_index == 0);
+}
+
+static bool gui_page_is_at_last_page(void)
 {
     return (ctx.page_index >= ctx.pages.length);
 }
@@ -158,7 +169,6 @@ static void gui_page_render_section(const epub_section_t *section)
 
     /* Create LVGL objects with rendered text blocks for entire section */
     while (1) {
-        ESP_LOGW(TAG, "Entering loop");
         const epub_text_block_t *epub_block = section->data[block_index];
         char *text = &epub_block->text[block_offset_bytes];
 
@@ -176,20 +186,15 @@ static void gui_page_render_section(const epub_section_t *section)
             page = gui_page_create_page();
         }
         else if (excess_char_index > 0) { // Block fits partially
-            lv_obj_del(new_gui_block);
+            /* Remove excess part */
+            lv_label_cut_text(new_gui_block, excess_char_index, LV_LABEL_POS_LAST);
 
             /* Convert char index to byte offset */
-            const size_t bytes_to_add = _lv_txt_encoded_get_byte_id(text, excess_char_index);
-
-            /* Temporarily terminate text array at last fitting char, add block to page and un-terminate */
-            const char excess_byte = text[bytes_to_add];
-            text[bytes_to_add] = '\0';
-            gui_page_add_block(page, text, epub_block->font_type);
-            text[bytes_to_add] = excess_byte;
+            const size_t bytes_added = _lv_txt_encoded_get_byte_id(text, excess_char_index);
 
             /* Update variables */
-            block_offset_bytes += bytes_to_add;
-            block_bytes_left -= bytes_to_add;
+            block_offset_bytes += bytes_added;
+            block_bytes_left -= bytes_added;
             
             /* Add page to pages vector and create new one */
             vec_push(&ctx.pages, page);
@@ -200,7 +205,7 @@ static void gui_page_render_section(const epub_section_t *section)
             block_index++;
             if (gui_page_is_section_end(section, block_index)) {
                 ESP_LOGI(TAG, "Reached end of section %zu", ctx.spine_index);
-                break; // Stop rendering loop
+                break;
             }
             else {
                 block_offset_bytes = 0;
@@ -221,35 +226,58 @@ static void gui_page_destroy_section(void)
     vec_deinit(&ctx.pages);
 }
 
-static void gui_page_swipe_callback(lv_event_t *event)
+static void gui_page_turn(gui_page_direction_t direction)
 {
-    const lv_dir_t swipe_direction = lv_indev_get_gesture_dir(lv_indev_get_act());
-    ESP_LOGI(TAG, "Received swipe gesture %d!", swipe_direction);
-
-    switch (swipe_direction) {
-        case LV_DIR_LEFT: {
-            if (gui_page_is_last_page_in_section()) {
-                break;
-            }
+    switch (direction) {
+        case GUI_PAGE_FIRST:
             lv_obj_add_flag(ctx.pages.data[ctx.page_index], LV_OBJ_FLAG_HIDDEN);
-            ctx.page_index++;
+            ctx.page_index = 0;
             lv_obj_clear_flag(ctx.pages.data[ctx.page_index], LV_OBJ_FLAG_HIDDEN);
-        } break;
+            break;
 
-        case LV_DIR_RIGHT: {
-            if (ctx.page_index == 0) {
+        case GUI_PAGE_PREVIOUS:
+            if (gui_page_is_at_first_page()) {
+                ESP_LOGW(TAG, "TODO: previous page - add previous section rendering");
                 break;
             }
             lv_obj_add_flag(ctx.pages.data[ctx.page_index], LV_OBJ_FLAG_HIDDEN);
             ctx.page_index--;
             lv_obj_clear_flag(ctx.pages.data[ctx.page_index], LV_OBJ_FLAG_HIDDEN);
-        } break;
+            break;
+
+        case GUI_PAGE_NEXT:
+            if (gui_page_is_at_last_page()) {
+                ESP_LOGW(TAG, "TODO: last page - add next section rendering");
+                break;
+            }
+            lv_obj_add_flag(ctx.pages.data[ctx.page_index], LV_OBJ_FLAG_HIDDEN);
+            ctx.page_index++;
+            lv_obj_clear_flag(ctx.pages.data[ctx.page_index], LV_OBJ_FLAG_HIDDEN);
+            break;
 
         default:
-            ESP_LOGW(TAG, "Unhandled swipe direction!");
+            break;    
+    }
+}
+
+static void gui_page_swipe_callback(lv_event_t *event)
+{
+    const lv_dir_t swipe_direction = lv_indev_get_gesture_dir(lv_indev_get_act());
+
+    switch (swipe_direction) {
+        case LV_DIR_LEFT: 
+            gui_page_turn(GUI_PAGE_NEXT);
+            break;
+
+        case LV_DIR_RIGHT:
+            gui_page_turn(GUI_PAGE_PREVIOUS);
+            break;
+
+        case LV_DIR_BOTTOM:
+            ESP_LOGW(TAG, "TODO: add leaving page view");
+            break;
+
+        default:
             break;
     }
-
-    // gui_page_is_last_page_in_section
-    // gui_page_render(GUI_PAGE_NEXT);
 }
