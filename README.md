@@ -1,2 +1,2 @@
-# M5Paper-LVGL
-LVGL library running on M5Paper with own EPD driver implementation.
+# M5Paper-ePub-reader
+M5Paper-based e-book reader supporting ePub format, with GUI created using LVGL.
