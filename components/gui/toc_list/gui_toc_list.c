@@ -82,7 +82,7 @@ void gui_toc_list_create(const char *filepath)
 /* Private function definitions */
 static void gui_toc_item_click_callback(lv_event_t *event)
 {
-    epub_toc_entry_t *entry = lv_event_get_user_data(event);
+    const epub_toc_entry_t *entry = lv_event_get_user_data(event);
     const ssize_t spine_index = epub_get_spine_entry_index(&ctx.current_epub, entry->path);
 
     ESP_LOGI(TAG, "Entry title: %s", entry->title);
