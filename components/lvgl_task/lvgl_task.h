@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "eink.h"
 #include <stdbool.h>
 
@@ -23,3 +27,7 @@ void lvgl_task_start(void);
 
 bool lvgl_task_acquire(void);
 void lvgl_task_release(void);
+
+#ifdef __cplusplus
+}
+#endif

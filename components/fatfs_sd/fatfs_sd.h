@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <esp_err.h>
 
 #define FATFS_SD_SPI_CS_PIN 4
@@ -11,3 +15,7 @@
 
 esp_err_t fatfs_sd_init(void);
 esp_err_t fatfs_sd_deinit(void);
+
+#ifdef __cplusplus
+}
+#endif

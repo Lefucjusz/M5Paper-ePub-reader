@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <time.h>
 
 #define REAL_TIME_CLOCK_I2C_PORT I2C_NUM_0
@@ -22,3 +26,7 @@ real_time_clock_err_t real_time_clock_get_time(struct tm *time);
 
 real_time_clock_err_t real_time_clock_set_alarm(const struct tm *alarm);
 real_time_clock_err_t real_time_clock_get_alarm(struct tm *alarm);
+
+#ifdef __cplusplus
+}
+#endif

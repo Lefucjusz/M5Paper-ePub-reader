@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <esp_err.h>
 #include <stdint.h>
 
@@ -11,3 +15,7 @@ uint16_t battery_get_raw_adc_value(void);
 uint16_t battery_get_voltage(void);
 uint16_t battery_get_voltage_filtered(void);
 uint8_t battery_get_percent(void);
+
+#ifdef __cplusplus
+}
+#endif

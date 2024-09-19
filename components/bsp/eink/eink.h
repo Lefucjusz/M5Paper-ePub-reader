@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "IT8951.h"
 #include "spi.h"
 #include <esp_err.h>
@@ -10,7 +14,7 @@
 #define EINK_SPI_HOST M5_SPI_HOST
 #define EINK_SPI_MAX_TRANSFER_SIZE_BYTES SPI_MAX_TRANSFER_SIZE_BYTES
 
-#define EINK_SPI_CLOCK_SPEED_HZ (20 * 1000 * 1000) // Max. IT8951 SCLK speed is 24MHz, but ESP32 SPI clock can be either 20MHz or 26.7MHz; the latter one results in glitches
+#define EINK_SPI_CLOCK_SPEED_HZ (24 * 1000 * 1000) // Max. IT8951 SCLK speed is 24MHz, but ESP32 SPI clock can be either 20MHz or 26.7MHz; the latter one results in glitches
 #define EINK_SPI_MODE 0
 
 #define EINK_SPI_CS_PIN 15
@@ -92,3 +96,7 @@ eink_err_t eink_write_full(const uint8_t *px_map);
 
 eink_err_t eink_refresh(uint16_t x, uint16_t y, uint16_t w, uint16_t h, eink_update_mode_t mode);
 eink_err_t eink_refresh_full(eink_update_mode_t mode);
+
+#ifdef __cplusplus
+}
+#endif

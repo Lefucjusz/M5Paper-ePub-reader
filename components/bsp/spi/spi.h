@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <esp_err.h>
 #include <driver/spi_master.h>
 
@@ -12,3 +16,7 @@
 
 esp_err_t spi_init(void);
 esp_err_t spi_deinit(void);
+
+#ifdef __cplusplus
+}
+#endif

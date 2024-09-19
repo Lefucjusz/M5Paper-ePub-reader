@@ -4,6 +4,7 @@
 #include <driver/gpio.h>
 #include <driver/spi_master.h>
 #include <esp_log.h>
+#include <endian.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 

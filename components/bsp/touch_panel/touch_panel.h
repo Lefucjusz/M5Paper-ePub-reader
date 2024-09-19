@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "i2c.h"
 #include <stdint.h>
 #include <esp_err.h>
@@ -45,3 +49,7 @@ typedef struct
 
 touch_panel_err_t touch_panel_init(touch_panel_rotation_t rotation);
 touch_panel_err_t touch_get_coords(touch_panel_coords_t *coords);
+
+#ifdef __cplusplus
+}
+#endif
