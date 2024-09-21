@@ -1,4 +1,5 @@
 #include "spi.h"
+#include <utils.h>
 
 esp_err_t spi_init(void)
 {
@@ -17,4 +18,16 @@ esp_err_t spi_init(void)
 esp_err_t spi_deinit(void)
 {
     return spi_bus_free(M5_SPI_HOST);
+}
+
+esp_err_t spi_transfer(spi_device_handle_t spi_dev, const void *tx_buffer, void *rx_buffer, size_t size)
+{
+    spi_transaction_t transaction = {
+        .tx_buffer = tx_buffer,
+        .rx_buffer = rx_buffer,
+        .length = BYTES_TO_BITS(size),
+        .rxlength = BYTES_TO_BITS(size)
+    };
+
+    return spi_device_polling_transmit(spi_dev, &transaction);
 }

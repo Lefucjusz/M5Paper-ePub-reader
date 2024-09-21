@@ -105,6 +105,8 @@
         "typeinfo": "cpp",
         "task.h": "c",
         "endian.h": "c",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "lvgl.h": "c",
+        "eink.h": "c"
     }
 }

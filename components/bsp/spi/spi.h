@@ -17,6 +17,8 @@ extern "C" {
 esp_err_t spi_init(void);
 esp_err_t spi_deinit(void);
 
+esp_err_t spi_transfer(spi_device_handle_t spi_dev, const void *tx_buffer, void *rx_buffer, size_t size);
+
 #ifdef __cplusplus
 }
 #endif

@@ -13,6 +13,9 @@
 #define MAKE_BYTE(hi, lo) (((hi) << 4) | (lo))
 #define MAKE_WORD(hi, lo) (((hi) << 8) | (lo))
 
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+
 /* Useful functions */
 inline static int32_t clamp(int32_t x, int32_t min, int32_t max)
 {
@@ -22,16 +25,6 @@ inline static int32_t clamp(int32_t x, int32_t min, int32_t max)
 inline static int32_t map(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
 {
 	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-inline static int32_t min(int32_t x, int32_t y)
-{
-	return (x < y) ? x : y;
-}
-
-inline static int32_t max(int32_t x, int32_t y)
-{
-	return (x > y) ? x : y;
 }
 
 inline static uint8_t dec2bcd(uint8_t dec)

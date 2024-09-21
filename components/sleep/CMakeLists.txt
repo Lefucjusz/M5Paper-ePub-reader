@@ -1,8 +1,10 @@
 idf_component_register(
     SRCS 
-        "utils.h" 
-        "path_utils.h"                   
+        "sleep.c"
     
     INCLUDE_DIRS 
         "."
+
+    PRIV_REQUIRES
+        touch_panel
 )

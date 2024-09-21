@@ -1,11 +1,14 @@
 #include "lvgl_task.h"
-#include "utils.h"
-#include "touch_panel.h"
+#include <utils.h>
+#include <sleep.h>
+#include <touch_panel.h>
 #include <lvgl.h>
 #include <esp_log.h>
 #include <esp_timer.h>
+#include <esp_check.h>
 #include <freertos/FreeRTOS.h>
-#include <freertos/timers.h>
+
+#define TAG LVGL_TASK_NAME
 
 typedef struct
 {
@@ -13,14 +16,12 @@ typedef struct
 	lv_color_t draw_buf[LVGL_DRAW_BUFFER_SIZE];
 	lv_disp_drv_t disp_drv;
 	lv_indev_drv_t indev_drv;
-    SemaphoreHandle_t lvgl_task_semaphore;
     eink_update_mode_t refresh_mode;
     uint8_t fast_refresh_count;
-    TimerHandle_t eink_sleep_timer;
-    bool is_eink_awake;
+    esp_timer_handle_t tick_timer;
 } lvgl_ctx_t;
 
-static lvgl_ctx_t EXT_RAM_BSS_ATTR ctx;
+static lvgl_ctx_t /* EXT_RAM_BSS_ATTR */ ctx;
 
 /* Private functions declarations */
 static void lvgl_transform_pixel_map(lv_color_t *px_map, size_t size);
@@ -32,13 +33,12 @@ static void lvgl_on_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data);
 static eink_err_t lvgl_display_init(void);
 static touch_panel_err_t lvgl_touch_init(void);
 static esp_err_t lvgl_tick_timer_init(void);
-static esp_err_t lvgl_eink_sleep_timer_init(void);
 
-static eink_err_t lvgl_eink_wakeup(void);
+static void lvgl_enter_sleep_mode(void);
+static void lvgl_leave_sleep_mode(void);
 
 static void lvgl_task(void *arg);
 static void lvgl_tick_timer_callback(void *arg);
-static void lvgl_eink_sleep_timer_callback(TimerHandle_t timer);
 
 /* Public functions */
 void lvgl_task_init(void)
@@ -46,30 +46,15 @@ void lvgl_task_init(void)
     /* Initialize LVGL */
     lv_init();
 
-    /* Create LVGL task semaphore */
-    ctx.lvgl_task_semaphore = xSemaphoreCreateMutex();
-
     /* Initialize hardware */
     lvgl_display_init(); // TODO error handling
     lvgl_touch_init();
     lvgl_tick_timer_init();
-
-    lvgl_eink_sleep_timer_init();
 }
 
 void lvgl_task_start(void)
 {
     xTaskCreatePinnedToCore(lvgl_task, LVGL_TASK_NAME, LVGL_TASK_STACK_SIZE / sizeof(StackType_t), NULL, 0, NULL, LVGL_TASK_CORE_AFFINITY);
-}
-
-bool lvgl_task_acquire(void)
-{
-    return xSemaphoreTake(ctx.lvgl_task_semaphore, portMAX_DELAY);
-}
-
-void lvgl_task_release(void)
-{
-    xSemaphoreGive(ctx.lvgl_task_semaphore);
 }
 
 /* Private functions */
@@ -140,12 +125,12 @@ static void lvgl_transform_pixel_map(lv_color_t *px_map, size_t size)
 static void lvgl_refresh_screen(void)
 {
     if ((ctx.refresh_mode == EINK_UPDATE_MODE_GC16) || (ctx.fast_refresh_count >= LVGL_FAST_PER_DEEP_REFRESHES)) {
-        ESP_LOGI("", "Refreshing with GC16");
+        ESP_LOGI(TAG, "Refreshing with GC16");
         eink_refresh_full(EINK_UPDATE_MODE_GC16);
         ctx.fast_refresh_count = 0;
     }
     else {
-        ESP_LOGI("", "Refreshing with %s", ctx.refresh_mode == EINK_UPDATE_MODE_DU4 ? "DU4" : "A2");
+        ESP_LOGI(TAG, "Refreshing with %s", ctx.refresh_mode == EINK_UPDATE_MODE_DU4 ? "DU4" : "A2");
         eink_refresh_full(ctx.refresh_mode);
         ++ctx.fast_refresh_count;
     }
@@ -160,19 +145,17 @@ static void lvgl_on_display_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area
     const size_t area_size = width * height;
 
     lvgl_transform_pixel_map(px_map, area_size);
-
-    lvgl_eink_wakeup();
     eink_write(area->x1, area->y1, width, height, (uint8_t *)px_map);
 
     if (lv_disp_flush_is_last(disp_drv)) {
         lvgl_refresh_screen();
         lvgl_reset_refresh_mode();
         const uint32_t current_refresh = lv_tick_get();
-        ESP_LOGE("PROFILING", "Time between refreshes: %lums", current_refresh - last_refresh);
+        ESP_LOGI(TAG, "Time between refreshes: %lums", current_refresh - last_refresh);
         last_refresh = current_refresh;
     }
 
-    lv_disp_flush_ready(&ctx.disp_drv);
+    lv_disp_flush_ready(&ctx.disp_drv); // TODO the rendering concept is not very good, try to parallelize drawing new frame and rendering previous
 }
 
 static void lvgl_coords_rounder(lv_disp_drv_t *disp_drv, lv_area_t *area)
@@ -196,7 +179,6 @@ static eink_err_t lvgl_display_init(void)
 {
     /* Set initial state */
     ctx.fast_refresh_count = 0;
-    ctx.is_eink_awake = true;
     lvgl_reset_refresh_mode();
 
     /* Initialize eink hardware */
@@ -251,76 +233,75 @@ static esp_err_t lvgl_tick_timer_init(void)
         .name = LVGL_TICK_TIMER_NAME
     };
 
-    esp_timer_handle_t timer;
-
-    esp_err_t err = esp_timer_create(&timer_args, &timer);
+    esp_err_t err = esp_timer_create(&timer_args, &ctx.tick_timer);
     if (err) {
         return err;
     }
-    err = esp_timer_start_periodic(timer, LVGL_TICK_TIMER_PERIOD_MS * 1000);
+    err = esp_timer_start_periodic(ctx.tick_timer, LVGL_TICK_TIMER_PERIOD_MS * 1000);
     if (err) {
-        esp_timer_delete(timer);
+        esp_timer_delete(ctx.tick_timer);
         return err;
     }
     return ESP_OK;
 }
 
-static esp_err_t lvgl_eink_sleep_timer_init(void)
+static void lvgl_enter_sleep_mode(void)
 {
-    ctx.eink_sleep_timer = xTimerCreate(LVGL_SLEEP_TIMER_NAME, pdMS_TO_TICKS(LVGL_SLEEP_TIMER_PERIOD_MS), pdFALSE, NULL, lvgl_eink_sleep_timer_callback);
-    if (ctx.eink_sleep_timer == NULL) {
-        return ESP_FAIL;
+    const eink_err_t eink_err = eink_sleep();
+    if (eink_err != EINK_OK) {
+        ESP_LOGE(TAG, "Failed to put eink to sleep, error %d", eink_err);
+        return;
     }
-    if (xTimerStart(ctx.eink_sleep_timer, 0) != pdPASS) {
-        return ESP_FAIL;
+
+    esp_err_t esp_err = esp_timer_stop(ctx.tick_timer);
+    if (esp_err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to stop tick timer, error %d", esp_err);
     }
-    return ESP_OK;
+
+    esp_err = sleep_enter();
+    if (esp_err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to put ESP to light sleep, error %d", esp_err);
+    }
 }
 
-static eink_err_t lvgl_eink_wakeup(void)
+static void lvgl_leave_sleep_mode(void)
 {
-    /* Restart sleep timer */
-    xTimerReset(ctx.eink_sleep_timer, 0);
-
-    /* If eink asleep - wake it up */
-    if (!ctx.is_eink_awake) {
-        ESP_LOGI("", "Waking up eink!");
-        const esp_err_t err = eink_wakeup();
-        if (err) {
-            ESP_LOGE("", "Failed to wakeup eink: %d", err);
-            return err;
-        }
-        ctx.is_eink_awake = true;
+    const esp_err_t timer_err = esp_timer_start_periodic(ctx.tick_timer, LVGL_TICK_TIMER_PERIOD_MS * 1000);
+    if (timer_err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start tick timer, error %d", timer_err);
+        return;
     }
 
-    return ESP_OK;
+    const eink_err_t eink_err = eink_wakeup();
+    if (eink_err != EINK_OK) {
+        ESP_LOGE(TAG, "Failed to wake up eink, error %d", eink_err);
+        return;
+    }
+
+    lv_tick_inc(LV_DISP_DEF_REFR_PERIOD);
+    lv_task_handler();
 }
 
 static void lvgl_task(void *arg)
 {
+    sleep_init();
+
     while (1) {
-        if (lvgl_task_acquire()) {
+        if (lv_disp_get_inactive_time(NULL) < LVGL_SLEEP_INACTIVITY_PERIOD_MS) {
             lv_task_handler();
-            lvgl_task_release();
-            vTaskDelay(pdMS_TO_TICKS(LVGL_TASK_HANDLER_PERIOD_MS));
         }
+        else {
+            lvgl_enter_sleep_mode();
+
+            // Here CPU is sleeping
+
+            lvgl_leave_sleep_mode();
+        }
+        vTaskDelay(pdMS_TO_TICKS(LVGL_TASK_HANDLER_PERIOD_MS));
     }
 }
 
 static void lvgl_tick_timer_callback(void *arg)
 {
     lv_tick_inc(LVGL_TICK_TIMER_PERIOD_MS);
-}
-
-static void lvgl_eink_sleep_timer_callback(TimerHandle_t timer)
-{
-    ESP_LOGI("", "Putting eink to sleep!");
-
-    const eink_err_t err = eink_sleep();
-    if (err) {
-        ESP_LOGE("", "Failed to put eink to sleep: %d", err);
-        return;
-    }
-
-    ctx.is_eink_awake = false;
 }
