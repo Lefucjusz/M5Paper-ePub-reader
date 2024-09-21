@@ -12,5 +12,5 @@ namespace gui
     #define GUI_FILES_LIST_BUTTON_PAD_TOP 20
     #define GUI_FILES_LIST_BUTTON_PAD_BOTTOM 20
 
-    auto filesListCreate(const std::filesystem::path &path) -> void;
+    auto filesListViewCreate(const std::filesystem::path &path) -> void;
 }

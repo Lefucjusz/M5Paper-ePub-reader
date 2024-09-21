@@ -6,11 +6,14 @@ cmake_minimum_required(VERSION 3.5)
 
 set(EXTRA_COMPONENT_DIRS 
     components/bsp
-    components/lvgl_task 
+    components/epub
+    components/fatfs_sd
+    components/gui
+    components/lvgl_task
+    components/sleep
+    components/third_party
     components/utils
-    components/gui 
-    components/third_party) # TODO not very clean, but I have no better idea for now
+)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(M5Paper-LVGL)
-

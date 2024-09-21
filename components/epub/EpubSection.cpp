@@ -1,8 +1,9 @@
 #include "EpubSection.hpp"
 #include <esp_log.h>
 #include <algorithm>
+#include <stdexcept>
 
-#define TAG "EpubSection" // TODO cleanup tags everywhere
+#define TAG __FILENAME__
 
 auto EpubSectionWalker::for_each(pugi::xml_node &node) -> bool
 {

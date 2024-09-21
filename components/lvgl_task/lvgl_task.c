@@ -8,7 +8,7 @@
 #include <esp_check.h>
 #include <freertos/FreeRTOS.h>
 
-#define TAG LVGL_TASK_NAME
+#define TAG __FILENAME__
 
 typedef struct
 {

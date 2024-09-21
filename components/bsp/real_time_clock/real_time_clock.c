@@ -1,20 +1,19 @@
 #include "real_time_clock.h"
-#include "i2c.h"
 #include "BM8563.h"
-#include "utils.h"
-#include <esp_log.h>
+#include <i2c.h>
+#include <utils.h>
 
 real_time_clock_err_t real_time_clock_init(void)
 {
     const uint8_t reg_value = 0;
 
     /* Disable POR, disable STOP, enable normal mode */
-    if (unlikely(i2c_write(BM8563_I2C_ADDRESS, BM8563_CONTROL_STATUS_1_REG, BM8563_REG_ADDR_SIZE_BYTES, &reg_value, sizeof(reg_value)) != ESP_OK)) {
+    if (i2c_write(BM8563_I2C_ADDRESS, BM8563_CONTROL_STATUS_1_REG, BM8563_REG_ADDR_SIZE_BYTES, &reg_value, sizeof(reg_value)) != ESP_OK) {
         return REAL_TIME_CLOCK_I2C_ERROR;
     }
 
     /* Disable timer and alarm interrupt, clear interrupt flags */
-    if (unlikely(i2c_write(BM8563_I2C_ADDRESS, BM8563_CONTROL_STATUS_2_REG, BM8563_REG_ADDR_SIZE_BYTES, &reg_value, sizeof(reg_value)) != ESP_OK)) {
+    if (i2c_write(BM8563_I2C_ADDRESS, BM8563_CONTROL_STATUS_2_REG, BM8563_REG_ADDR_SIZE_BYTES, &reg_value, sizeof(reg_value)) != ESP_OK) {
         return REAL_TIME_CLOCK_I2C_ERROR;
     }
 
@@ -42,7 +41,7 @@ real_time_clock_err_t real_time_clock_set_time(const struct tm *time)
     }
     time_buffer[6] = dec2bcd(time->tm_year % REAL_TIME_CLOCK_YEARS_PER_CENTURY);
 
-    if (unlikely(i2c_write(BM8563_I2C_ADDRESS, BM8563_VL_SECONDS_REG, BM8563_REG_ADDR_SIZE_BYTES, time_buffer, sizeof(time_buffer)) != ESP_OK)) {
+    if (i2c_write(BM8563_I2C_ADDRESS, BM8563_VL_SECONDS_REG, BM8563_REG_ADDR_SIZE_BYTES, time_buffer, sizeof(time_buffer)) != ESP_OK) {
         return REAL_TIME_CLOCK_I2C_ERROR;
     }
 
@@ -59,7 +58,7 @@ real_time_clock_err_t real_time_clock_get_time(struct tm *time)
     uint8_t time_buffer[BM8563_TIME_DATA_SIZE];
 
     /* Read entire time data packet */
-    if (unlikely(i2c_read(BM8563_I2C_ADDRESS, BM8563_VL_SECONDS_REG, BM8563_REG_ADDR_SIZE_BYTES, time_buffer, sizeof(time_buffer)) != ESP_OK)) {
+    if (i2c_read(BM8563_I2C_ADDRESS, BM8563_VL_SECONDS_REG, BM8563_REG_ADDR_SIZE_BYTES, time_buffer, sizeof(time_buffer)) != ESP_OK) {
         return REAL_TIME_CLOCK_I2C_ERROR;
     }
 

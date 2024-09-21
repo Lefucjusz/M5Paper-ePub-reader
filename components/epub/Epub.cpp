@@ -1,12 +1,12 @@
 #include "Epub.hpp"
 #include "EpubConstants.hpp"
 #include "UniqueMptr.hpp"
-#include "pugixml.hpp"
+#include <pugixml.hpp>
 #include <esp_log.h>
 #include <map>
 #include <algorithm>
 
-#define TAG "Epub"
+#define TAG __FILENAME__
 
 using namespace constants::epub;
 

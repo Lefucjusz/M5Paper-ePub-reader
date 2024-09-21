@@ -1,6 +1,6 @@
 #include "touch_panel.h"
 #include "GT911.h"
-#include "utils.h"
+#include <utils.h>
 
 typedef struct
 {
@@ -17,8 +17,8 @@ touch_panel_err_t touch_panel_init(touch_panel_rotation_t rotation)
     ctx.last_y = 0;
     ctx.rotation = rotation;
 
-    gpio_config_t gpio_cfg = {
-        .intr_type = GPIO_INTR_DISABLE, // TODO for now interrupt pin is unused
+    const gpio_config_t gpio_cfg = {
+        .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_INPUT,
         .pin_bit_mask = (1ULL << TOUCH_PANEL_IRQ_PIN),
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -26,7 +26,7 @@ touch_panel_err_t touch_panel_init(touch_panel_rotation_t rotation)
     };
 
     /* Initialize peripherals */
-    if (unlikely(gpio_config(&gpio_cfg) != ESP_OK)) {
+    if (gpio_config(&gpio_cfg) != ESP_OK) {
         return TOUCH_PANEL_GPIO_ERROR;
     }
     return TOUCH_PANEL_OK;
@@ -35,14 +35,14 @@ touch_panel_err_t touch_panel_init(touch_panel_rotation_t rotation)
 touch_panel_err_t touch_get_coords(touch_panel_coords_t *coords) // TODO add multiple touches handling
 {
     /* Sanity check */
-    if (unlikely(coords == NULL)) {
+    if (coords == NULL) {
         return TOUCH_PANEL_INVALID_ARG;
     }
 
     /* Read status register */
     uint8_t status_reg;
     esp_err_t err = i2c_read(GT911_I2C_ADDRESS, GT911_TOUCH_STATUS_REG, GT911_REG_ADDR_SIZE_BYTES, &status_reg, sizeof(status_reg));
-    if (unlikely(err != ESP_OK)) {
+    if (err != ESP_OK) {
         return TOUCH_PANEL_I2C_ERROR;
     }
 
@@ -60,7 +60,7 @@ touch_panel_err_t touch_get_coords(touch_panel_coords_t *coords) // TODO add mul
         /* Read touch data */
         uint8_t touch_data[GT911_TOUCH_COORDS_SIZE];
         err = i2c_read(GT911_I2C_ADDRESS, GT911_POINT_1_X_COORD_LSB_REG, GT911_REG_ADDR_SIZE_BYTES, &touch_data, sizeof(touch_data));
-        if (unlikely(err != ESP_OK)) {
+        if (err != ESP_OK) {
             return TOUCH_PANEL_I2C_ERROR;
         }
         
@@ -100,7 +100,7 @@ touch_panel_err_t touch_get_coords(touch_panel_coords_t *coords) // TODO add mul
     /* Clear status register */
     status_reg = 0;
     err = i2c_write(GT911_I2C_ADDRESS, GT911_TOUCH_STATUS_REG, GT911_REG_ADDR_SIZE_BYTES, &status_reg, sizeof(status_reg));
-    if (unlikely(err != ESP_OK)) {
+    if (err != ESP_OK) {
         return TOUCH_PANEL_I2C_ERROR;
     }
     return TOUCH_PANEL_OK;

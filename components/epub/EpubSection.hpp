@@ -1,7 +1,7 @@
 #pragma once
 
 #include "TextBlock.hpp"
-#include <pugixml.hpp>
+#include <pugixml/pugixml.hpp>
 #include <string>
 #include <vector>
 #include <array>

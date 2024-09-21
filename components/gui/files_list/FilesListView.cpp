@@ -1,13 +1,13 @@
-#include "FilesList.hpp"
+#include "FilesListView.hpp"
 #include "DirectoryIterator.hpp"
 #include "PopupUnsupported.hpp"
+#include "TocListView.hpp"
 #include "Fonts.h"
 #include <lvgl.h>
 #include <esp_log.h>
 #include <vector>
-// #include "gui_toc_list.h"
 
-#define TAG "GuiFilesList"
+#define TAG __FILENAME__
 
 namespace gui
 {
@@ -50,7 +50,7 @@ namespace gui
         auto supportedFileClickCallback(lv_event_t *event) -> void
         {
             const auto entryIndex = reinterpret_cast<std::size_t>(lv_event_get_user_data(event));
-            ESP_LOGW(TAG, "TODO: gui_toc_list_create '%s'", (currentPath / currentEntries[entryIndex]).c_str());
+            tocListViewCreate(currentPath / currentEntries[entryIndex]);
         }
 
         auto unsupportedFileClickCallback(lv_event_t *event) -> void
@@ -67,7 +67,7 @@ namespace gui
 
             /* Create directory up button */
             if (!isCurrentPathRoot()) {
-                auto *up_button = lv_list_add_btn(filesList, LV_SYMBOL_DIRECTORY, "..");
+                auto up_button = lv_list_add_btn(filesList, LV_SYMBOL_DIRECTORY, "..");
                 lv_obj_set_style_text_font(up_button, &gui_montserrat_medium_36, LV_PART_MAIN);
                 lv_obj_set_style_pad_top(up_button, GUI_FILES_LIST_BUTTON_PAD_TOP, LV_PART_MAIN);
                 lv_obj_set_style_pad_bottom(up_button, GUI_FILES_LIST_BUTTON_PAD_BOTTOM, LV_PART_MAIN);
@@ -97,7 +97,7 @@ namespace gui
                 lv_obj_set_style_text_font(entryButton, &gui_montserrat_medium_36, LV_PART_MAIN);
                 lv_obj_set_style_pad_top(entryButton, GUI_FILES_LIST_BUTTON_PAD_TOP, LV_PART_MAIN);
                 lv_obj_set_style_pad_bottom(entryButton, GUI_FILES_LIST_BUTTON_PAD_BOTTOM, LV_PART_MAIN);
-                auto *entryButtonLabel = lv_obj_get_child(entryButton, lv_obj_get_child_cnt(entryButton) - 1); // Label is created as a last child
+                auto entryButtonLabel = lv_obj_get_child(entryButton, lv_obj_get_child_cnt(entryButton) - 1); // Label is created as a last child
                 lv_label_set_long_mode(entryButtonLabel, LV_LABEL_LONG_WRAP); // Disable scrolling, just wrap the text
 
                 entryIndex++;
@@ -105,7 +105,7 @@ namespace gui
         }
     }
 
-    auto filesListCreate(const std::filesystem::path &path) -> void
+    auto filesListViewCreate(const std::filesystem::path &path) -> void
     {
         rootPath = path;
         currentPath = rootPath;

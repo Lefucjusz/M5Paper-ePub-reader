@@ -1,5 +1,5 @@
 #include "fatfs_sd.h"
-#include "spi.h"
+#include <spi.h>
 #include <esp_vfs_fat.h>
 
 static sdmmc_card_t *card = NULL;

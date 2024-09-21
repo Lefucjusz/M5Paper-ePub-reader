@@ -9,7 +9,7 @@
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
-#define TAG "Eink"
+#define TAG __FILENAME__
 
 typedef struct
 {

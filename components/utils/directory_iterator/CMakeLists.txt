@@ -1,7 +1,7 @@
 idf_component_register(
     SRCS 
-    "DirectoryIterator.cpp" 
+        "DirectoryIterator.cpp" 
                        
     INCLUDE_DIRS 
-    "."
+        "."
 )

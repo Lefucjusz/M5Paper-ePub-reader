@@ -1,16 +1,24 @@
-#include "lvgl_task.h"
-#include "i2c.h"
-#include "spi.h"
-#include "fatfs_sd.h"
-#include "battery.h"
-#include "real_time_clock.h"
-// #include "gui.h"
+#include <lvgl_task.h>
+#include <i2c.h>
+#include <spi.h>
+#include <fatfs_sd.h>
+#include <battery.h>
+#include <real_time_clock.h>
+#include <Gui.hpp>
 #include <driver/gpio.h>
 #include <esp_log.h>
 
-#include "FilesList.hpp"
-
-#include "Epub.hpp"
+/* TODO: 
+ * - constexprs instead of defines in GUI
+ * - move GUI style constants to separate files
+ * - put whole GUI into namespace
+ * - reimplement remaining GUI elements
+ * - implement or delete clock
+ * - implement powering off
+ * - fix compilation warnings (battery, lvgl)
+ * - implement simultaneous rendering and drawing
+ * - update I2C driver
+ */
 
 extern "C" void app_main()
 {
@@ -31,30 +39,8 @@ extern "C" void app_main()
     ESP_ERROR_CHECK(real_time_clock_init());
     ESP_ERROR_CHECK(fatfs_sd_init());
 
-    // dir_init(FATFS_SD_ROOT_PATH);
-
-    // try {
-    //     auto epub = std::make_unique<Epub>("/sdcard/huxley-heaven-hell.epub");
-    //     auto section = epub->getSection("OEBPS/ch05.xhtml");
-
-    //     // ESP_LOGI("", "%s", section.getRaw().c_str());
-
-    //     auto blocks = section.getBlocks();
-
-    //     for (auto &b : blocks) {
-    //         ESP_LOGI("", "%s\n", b.text.c_str());
-    //     }
-    // } catch (const std::exception &e) {
-    //     ESP_LOGE("", "Exception while opening epub: %s", e.what());
-    // }
-
-    // battery_init();
-    lvgl_task_init(); // TODO this should rather be gui_task
-
-    gui::filesListCreate("/sdcard");
-
-    // gui_create();
-   
+    lvgl_task_init();
+    gui::create(FATFS_SD_ROOT_PATH);
     lvgl_task_start();
 
     // TODO perform cleanup somewhere

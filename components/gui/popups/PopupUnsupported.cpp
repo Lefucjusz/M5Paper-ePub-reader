@@ -9,7 +9,7 @@ namespace gui
     {
         const auto &message = "File " + filename.string() + " has unsupported format!";
 
-        auto *msgbox = lv_msgbox_create(NULL, GUI_UNSUPPORTED_POPUP_TITLE, message.c_str(), nullptr, true);
+        auto msgbox = lv_msgbox_create(NULL, GUI_UNSUPPORTED_POPUP_TITLE, message.c_str(), nullptr, true);
         lv_obj_set_style_border_width(msgbox, GUI_UNSUPPORTED_POPUP_BORDER_WIDTH, LV_PART_MAIN);
         
         lv_obj_set_height(lv_msgbox_get_title(msgbox), GUI_UNSUPPORTED_POPUP_TITLE_HEIGHT);
