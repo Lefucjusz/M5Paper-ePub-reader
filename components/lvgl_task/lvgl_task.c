@@ -1,11 +1,14 @@
 #include "lvgl_task.h"
+#include <lvgl.h>
 #include <utils.h>
 #include <sleep.h>
+#include <eink_worker.h>
 #include <touch_panel.h>
-#include <lvgl.h>
 #include <esp_log.h>
 #include <esp_timer.h>
 #include <esp_check.h>
+#include <esp_log.h>
+#include <driver/uart.h>
 #include <freertos/FreeRTOS.h>
 
 #define TAG __FILENAME__
@@ -13,22 +16,20 @@
 typedef struct
 {
     lv_disp_draw_buf_t disp_buf;
-	lv_color_t draw_buf[LVGL_DRAW_BUFFER_SIZE];
+	lv_color_t draw_buf_1[LVGL_DRAW_BUFFER_SIZE];
+    lv_color_t draw_buf_2[LVGL_DRAW_BUFFER_SIZE];
 	lv_disp_drv_t disp_drv;
 	lv_indev_drv_t indev_drv;
-    eink_update_mode_t refresh_mode;
-    uint8_t fast_refresh_count;
     esp_timer_handle_t tick_timer;
 } lvgl_ctx_t;
 
-static lvgl_ctx_t /* EXT_RAM_BSS_ATTR */ ctx;
+static lvgl_ctx_t ctx;
 
 /* Private functions declarations */
-static void lvgl_transform_pixel_map(lv_color_t *px_map, size_t size);
-static void lvgl_refresh_screen(void);
 static void lvgl_on_display_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *px_map);
 static void lvgl_coords_rounder(lv_disp_drv_t *disp_drv, lv_area_t *area);
 static void lvgl_on_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data);
+static void lvgl_on_worker_ready(void);
 
 static eink_err_t lvgl_display_init(void);
 static touch_panel_err_t lvgl_touch_init(void);
@@ -50,6 +51,9 @@ void lvgl_task_init(void)
     lvgl_display_init(); // TODO error handling
     lvgl_touch_init();
     lvgl_tick_timer_init();
+
+    /* Start e-ink worker */
+    eink_worker_start(lvgl_on_worker_ready);
 }
 
 void lvgl_task_start(void)
@@ -58,104 +62,21 @@ void lvgl_task_start(void)
 }
 
 /* Private functions */
-static void lvgl_reset_refresh_mode(void)
-{
-    /* Default refresh mode */
-    ctx.refresh_mode = EINK_UPDATE_MODE_A2;
-}
-
-static void lvgl_update_refresh_mode(uint8_t px_brightness)
-{
-    /* The most capable refresh mode already required, return */
-    if (ctx.refresh_mode == EINK_UPDATE_MODE_GC16) {
-        return;
-    }
-
-    /* If not handled by A2 */
-    if ((px_brightness != EINK_PIXEL_BLACK) && (px_brightness != EINK_PIXEL_WHITE)) {
-        if ((px_brightness == EINK_PIXEL_DARK_GRAY_DU4) || (px_brightness == EINK_PIXEL_LIGHT_GRAY_DU4)) {
-            ctx.refresh_mode = EINK_UPDATE_MODE_DU4; // Can be handled by DU4
-        }
-        else {
-            ESP_LOGW("", "%d", px_brightness);
-            ctx.refresh_mode = EINK_UPDATE_MODE_GC16; // Can be handled only by GC16
-        }
-    }
-}
-
-static uint8_t lvgl_compute_brightness(lv_color_t color)
-{
-    /* These coefficients were derived by combining two equations needed to compute pixel brightness:
-     * - conversion from RGB332 to RGB888 (max. R value seems to be 7 in LVGL's "RGB232" mode);
-     * - conversion from RGB888 to luminance using ITU BT.601 Y = 0.299*R + 0.587*G + 0.114*B.
-     * 
-     * LVGL's lv_color_brightness() function does it the same way (using slightly different luminance 
-     * equation), but splits that computation into two steps. By merging coefficients used in those 
-     * steps the same result can be obtained faster, as less operations need to be done. 
-     * 
-     * Maximum luminance value obtained using this method is equal to:
-     * Ymax = (2^3 - 1)*11 + (2^3 - 1)*21 + (2^2 - 1)*10 = 254 */
-
-    const uint8_t red_factor = 11;
-    const uint8_t green_factor = 21;
-    const uint8_t blue_factor = 10;
-    return ((color.ch.red * red_factor) + (color.ch.green * green_factor) + (color.ch.blue * blue_factor));
-}
-
-static void lvgl_transform_pixel_map(lv_color_t *px_map, size_t size)
-{
-    for (size_t i = 0; i < size; ++i) {
-        const size_t byte_index = i / EINK_PIXELS_PER_BYTE;
-        const uint8_t px_index = i % EINK_PIXELS_PER_BYTE;
-        const uint8_t px_brightness = map(lvgl_compute_brightness(px_map[i]), 0, 254, EINK_PIXEL_BLACK, EINK_PIXEL_WHITE);
-        
-        if (px_index) {
-            px_map[byte_index].full &= ~EINK_PIXEL_WHITE;
-            px_map[byte_index].full |= px_brightness;
-        }
-        else {
-            px_map[byte_index].full &= ~(EINK_PIXEL_WHITE << 4);
-            px_map[byte_index].full |= (px_brightness << 4);
-        }
-
-        lvgl_update_refresh_mode(px_brightness);
-    }
-}
-
-static void lvgl_refresh_screen(void)
-{
-    if ((ctx.refresh_mode == EINK_UPDATE_MODE_GC16) || (ctx.fast_refresh_count >= LVGL_FAST_PER_DEEP_REFRESHES)) {
-        ESP_LOGI(TAG, "Refreshing with GC16");
-        eink_refresh_full(EINK_UPDATE_MODE_GC16);
-        ctx.fast_refresh_count = 0;
-    }
-    else {
-        ESP_LOGI(TAG, "Refreshing with %s", ctx.refresh_mode == EINK_UPDATE_MODE_DU4 ? "DU4" : "A2");
-        eink_refresh_full(ctx.refresh_mode);
-        ++ctx.fast_refresh_count;
-    }
-}
-
 static void lvgl_on_display_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *px_map)
 {
     static uint32_t last_refresh;
 
     const size_t width = (area->x2 - area->x1) + 1;
 	const size_t height = (area->y2 - area->y1) + 1;
-    const size_t area_size = width * height;
 
-    lvgl_transform_pixel_map(px_map, area_size);
-    eink_write(area->x1, area->y1, width, height, (uint8_t *)px_map);
+    eink_worker_write(area->x1, area->y1, width, height, px_map);
 
     if (lv_disp_flush_is_last(disp_drv)) {
-        lvgl_refresh_screen();
-        lvgl_reset_refresh_mode();
+        eink_worker_refresh();
         const uint32_t current_refresh = lv_tick_get();
         ESP_LOGI(TAG, "Time between refreshes: %lums", current_refresh - last_refresh);
         last_refresh = current_refresh;
     }
-
-    lv_disp_flush_ready(&ctx.disp_drv); // TODO the rendering concept is not very good, try to parallelize drawing new frame and rendering previous
 }
 
 static void lvgl_coords_rounder(lv_disp_drv_t *disp_drv, lv_area_t *area)
@@ -175,12 +96,18 @@ static void lvgl_on_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
     data->state = coords.state;
 }
 
+static void lvgl_on_worker_ready(void)
+{
+    lv_disp_flush_ready(&ctx.disp_drv);
+
+    /* Workaround to prevent entering sleep mode when e.g. list is inertially 
+     * scrolling. lv_disp_get_inactive_time() returns time of input device 
+     * inactivity, not time since last redraw. */
+    lv_disp_trig_activity(NULL);
+}
+
 static eink_err_t lvgl_display_init(void)
 {
-    /* Set initial state */
-    ctx.fast_refresh_count = 0;
-    lvgl_reset_refresh_mode();
-
     /* Initialize eink hardware */
     const eink_err_t err = eink_init(EINK_ROTATION_90, EINK_COLOR_NORMAL);
     if (err) {
@@ -188,7 +115,7 @@ static eink_err_t lvgl_display_init(void)
     }
 
     /* Initialize display buffer */
-    lv_disp_draw_buf_init(&ctx.disp_buf, &ctx.draw_buf, NULL, LVGL_DRAW_BUFFER_SIZE);
+    lv_disp_draw_buf_init(&ctx.disp_buf, &ctx.draw_buf_1, &ctx.draw_buf_2, LVGL_DRAW_BUFFER_SIZE);
 
     /* Create display driver */
     lv_disp_drv_init(&ctx.disp_drv);
@@ -284,18 +211,20 @@ static void lvgl_leave_sleep_mode(void)
 
 static void lvgl_task(void *arg)
 {
+    /* Init sleep mode handler */
     sleep_init();
 
+    /* Main loop */
     while (1) {
-        if (lv_disp_get_inactive_time(NULL) < LVGL_SLEEP_INACTIVITY_PERIOD_MS) {
-            lv_task_handler();
-        }
-        else {
+        if ((lv_disp_get_inactive_time(NULL) >= LVGL_SLEEP_INACTIVITY_PERIOD_MS) && eink_worker_idle()) {
             lvgl_enter_sleep_mode();
 
             // Here CPU is sleeping
 
             lvgl_leave_sleep_mode();
+        }
+        else {
+            lv_task_handler();
         }
         vTaskDelay(pdMS_TO_TICKS(LVGL_TASK_HANDLER_PERIOD_MS));
     }

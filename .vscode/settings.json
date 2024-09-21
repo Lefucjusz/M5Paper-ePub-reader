@@ -107,6 +107,7 @@
         "endian.h": "c",
         "filesystem": "cpp",
         "lvgl.h": "c",
-        "eink.h": "c"
+        "eink.h": "c",
+        "queue.h": "c"
     }
 }

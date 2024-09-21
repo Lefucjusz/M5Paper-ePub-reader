@@ -7,10 +7,11 @@ idf_component_register(
 
     REQUIRES 
         eink
-
+        
     PRIV_REQUIRES 
         lvgl 
         touch_panel
         sleep
         utils
+        eink_worker
 )

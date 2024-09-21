@@ -43,5 +43,13 @@ extern "C" void app_main()
     gui::create(FATFS_SD_ROOT_PATH);
     lvgl_task_start();
 
+    // vTaskDelay(200);
+    // eink_task_refresh();
+    // vTaskDelay(200);
+    // eink_task_refresh();
+    // vTaskDelay(200);
+    // eink_task_write(2, 1, 3, 7, NULL);
+    // eink_task_refresh();
+
     // TODO perform cleanup somewhere
 }
