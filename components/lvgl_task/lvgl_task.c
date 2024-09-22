@@ -89,7 +89,11 @@ static void lvgl_coords_rounder(lv_disp_drv_t *disp_drv, lv_area_t *area)
 static void lvgl_on_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
 {
     touch_panel_coords_t coords;
-    touch_get_coords(&coords);
+    const touch_panel_err_t err = touch_get_coords(&coords);
+    if (err != TOUCH_PANEL_OK) {
+        ESP_LOGE(TAG, "Failed to read touch panel, error: %d", err);
+        return;
+    }
 
     data->point.x = coords.x;
     data->point.y = coords.y;

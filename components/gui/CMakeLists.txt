@@ -2,7 +2,7 @@ idf_component_register(
     SRCS 
         "Gui.cpp"
         "toc_list/TocListView.cpp"
-        # "./status_bar/gui_status_bar.c"
+        "status_bar/StatusBar.cpp"
         # "./popups/gui_set_time_popup.c"
         "./popups/PopupUnsupported.cpp"
         "page/PageView.cpp"
@@ -19,7 +19,7 @@ idf_component_register(
         "." 
         "files_list"
         "toc_list"
-        # "./status_bar" 
+        "status_bar" 
         "popups"
         "page"
         "fonts"
@@ -30,4 +30,6 @@ idf_component_register(
         directory_iterator
         epub
         utils
+        battery
+        real_time_clock
 )

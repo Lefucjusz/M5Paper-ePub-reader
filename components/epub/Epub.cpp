@@ -48,44 +48,56 @@ auto Epub::getTableOfContent() const -> const std::vector<TocEntry> &
     return toc;
 }
 
-// auto Epub::getSpineEntryIndex(const std::filesystem::path &spineHref) const -> std::size_t
-// {
-//     const auto it = std::find_if(spine.begin(), spine.end(), [&](const auto &val) {
-//         ESP_LOGW("", "%s", val.c_str());
-//         return val == spineHref;
-//     });
+auto Epub::getSpineEntryIndex(const std::filesystem::path &spineHref) const -> std::size_t
+{
+    const auto it = std::find_if(spine.begin(), spine.end(), [&](const auto &val) {
+        return val == spineHref;
+    });
 
-//     return (it != spine.end()) ? std::distance(spine.begin(), it) : invalidSpineEntryIndex;
-// }
+    return (it != spine.end()) ? std::distance(spine.begin(), it) : invalidSpineEntryIndex;
+}
 
-// auto Epub::getSection(std::size_t spineEntryIndex) const -> EpubSection
-// {
-//     return {};
-// }
+auto Epub::getSpineItemsCount() const -> std::size_t
+{
+    return spine.size();
+}
+
+auto Epub::getSection(std::size_t spineEntryIndex) const -> EpubSection
+{
+    if (spineEntryIndex >= spine.size()) {
+        return {};
+    }
+
+    return getSection(spine[spineEntryIndex]);
+}
 
 auto Epub::getSection(const std::filesystem::path &spineHref) const -> EpubSection
 {
-    auto sectionRaw = mz_zip_reader_extract_file_to_heap(&zip, spineHref.c_str(), nullptr, 0);
+    std::size_t sectionSize;
+    auto sectionRaw = mz_zip_reader_extract_file_to_heap(&zip, spineHref.c_str(), &sectionSize, 0);
     auto sectionContents = unique_mptr<char[]>(static_cast<char *>(sectionRaw));
     if (sectionContents == nullptr) {
         ESP_LOGE(TAG, "Failed to extract '%s' from archive", spineHref.c_str());
         return {};
     }
-    return EpubSection{sectionContents.get()};
+
+    return EpubSection{std::string{sectionContents.get(), sectionSize}};
 }
 
 auto Epub::getContentOpfPath() const -> std::filesystem::path
 {
     /* Read container file from the archive and parse it */
-    auto containerRaw = mz_zip_reader_extract_file_to_heap(&zip, container::xmlPath, nullptr, 0);
+    std::size_t containerSize;
+    auto containerRaw = mz_zip_reader_extract_file_to_heap(&zip, container::xmlPath, &containerSize, 0);
     auto containerContents = unique_mptr<char[]>(static_cast<char *>(containerRaw));
     if (containerContents == nullptr) {
         ESP_LOGE(TAG, "Failed to extract '%s' from archive", container::xmlPath);
         return {};
     }
+    const auto &containerContentsString = std::string{containerContents.get(), containerSize};
 
     pugi::xml_document doc;
-    const auto &result = doc.load_string(containerContents.get());
+    const auto &result = doc.load_string(containerContentsString.c_str());
     if (!result) {
         ESP_LOGE(TAG, "Failed to parse '%s', error: %s", container::xmlPath, result.description());
         return {};
@@ -114,15 +126,17 @@ auto Epub::getRootDirectoryPath(const std::filesystem::path &contentOpfPath) con
 auto Epub::parseContentOpf(const std::filesystem::path &contentOpfPath, const std::filesystem::path &rootPath) -> std::filesystem::path
 {
     /* Read OPF file and parse it */
-    auto opfRaw = mz_zip_reader_extract_file_to_heap(&zip, contentOpfPath.c_str(), nullptr, 0);
+    std::size_t opfSize;
+    auto opfRaw = mz_zip_reader_extract_file_to_heap(&zip, contentOpfPath.c_str(), &opfSize, 0);
     auto opfContents = unique_mptr<char[]>(static_cast<char *>(opfRaw));
     if (opfContents == nullptr) {
         ESP_LOGE(TAG, "Failed to extract '%s' from archive", contentOpfPath.c_str());
         return {};
     }
+    const auto &opfContentsString = std::string{opfContents.get(), opfSize};
 
     pugi::xml_document doc;
-    const auto &result = doc.load_string(opfContents.get());
+    const auto &result = doc.load_string(opfContentsString.c_str());
     if (!result) {
         ESP_LOGE(TAG, "Failed to parse '%s', error: %s", contentOpfPath.c_str(), result.description());
         return {};
@@ -177,12 +191,14 @@ auto Epub::parseContentOpf(const std::filesystem::path &contentOpfPath, const st
 auto Epub::parseTocNcx(const std::filesystem::path &ncxPath, const std::filesystem::path &rootPath) -> bool
 {
     /* Read NCX file and parse it */
-    auto ncxRaw = mz_zip_reader_extract_file_to_heap(&zip, ncxPath.c_str(), nullptr, 0);
+    std::size_t ncxSize;
+    auto ncxRaw = mz_zip_reader_extract_file_to_heap(&zip, ncxPath.c_str(), &ncxSize, 0);
     auto ncxContents = unique_mptr<char[]>(static_cast<char *>(ncxRaw));
     if (ncxContents == nullptr) {
         ESP_LOGE(TAG, "Failed to extract '%s' from archive", ncxPath.c_str());
         return false;
     }
+    const auto &ncxContentsString = std::string{ncxContents.get(), ncxSize};
 
     pugi::xml_document doc;
     const auto &result = doc.load_string(ncxContents.get());

@@ -1,12 +1,16 @@
 #include "touch_panel.h"
 #include "GT911.h"
 #include <utils.h>
+#include <esp_log.h>
+
+#define TAG __FILENAME__
 
 typedef struct
 {
     uint16_t last_x;
     uint16_t last_y;
     touch_panel_rotation_t rotation;
+    uint8_t i2c_address;
 } touch_panel_ctx_t;
 
 static touch_panel_ctx_t ctx;
@@ -29,7 +33,31 @@ touch_panel_err_t touch_panel_init(touch_panel_rotation_t rotation)
     if (gpio_config(&gpio_cfg) != ESP_OK) {
         return TOUCH_PANEL_GPIO_ERROR;
     }
-    return TOUCH_PANEL_OK;
+
+    /* Workaround for hardware bug - GT911 address depends
+     * on its INT pin state during hardware reset. If the pin 
+     * is low, the address will be 0x5D, when it's high, the
+     * address will be 0x14. INT pin is directly connected to
+     * ESP, which seems to change its state during booting.
+     * In M5Paper GT911 hardware reset is done either by 
+     * UART control lines or by power button, each happens 
+     * with INT pin with different state, hence different I2C 
+     * address is configured. That's why both have to be 
+     * checked here. */
+    const uint8_t i2c_addresses[] = {GT911_I2C_ADDRESS_1, GT911_I2C_ADDRESS_2};
+    for (size_t i = 0; i < ARRAY_SIZE(i2c_addresses); ++i) {
+        ESP_LOGI(TAG, "Trying I2C address 0x%X", i2c_addresses[i]);
+        if (i2c_check_presence(i2c_addresses[i]) != ESP_OK) {
+            ESP_LOGI(TAG, "Address not found...");
+        }
+        else {
+            ESP_LOGI(TAG, "Address OK");
+            ctx.i2c_address = i2c_addresses[i];
+            return TOUCH_PANEL_OK;
+        }
+    }
+    ESP_LOGE(TAG, "Touch panel controller not found!");
+    return TOUCH_PANEL_I2C_ERROR;
 }
 
 touch_panel_err_t touch_get_coords(touch_panel_coords_t *coords) // TODO add multiple touches handling
@@ -41,7 +69,7 @@ touch_panel_err_t touch_get_coords(touch_panel_coords_t *coords) // TODO add mul
 
     /* Read status register */
     uint8_t status_reg;
-    esp_err_t err = i2c_read(GT911_I2C_ADDRESS, GT911_TOUCH_STATUS_REG, GT911_REG_ADDR_SIZE_BYTES, &status_reg, sizeof(status_reg));
+    esp_err_t err = i2c_read(ctx.i2c_address, GT911_TOUCH_STATUS_REG, GT911_REG_ADDR_SIZE_BYTES, &status_reg, sizeof(status_reg));
     if (err != ESP_OK) {
         return TOUCH_PANEL_I2C_ERROR;
     }
@@ -59,7 +87,7 @@ touch_panel_err_t touch_get_coords(touch_panel_coords_t *coords) // TODO add mul
     if (touch_count > 0) {
         /* Read touch data */
         uint8_t touch_data[GT911_TOUCH_COORDS_SIZE];
-        err = i2c_read(GT911_I2C_ADDRESS, GT911_POINT_1_X_COORD_LSB_REG, GT911_REG_ADDR_SIZE_BYTES, &touch_data, sizeof(touch_data));
+        err = i2c_read(ctx.i2c_address, GT911_POINT_1_X_COORD_LSB_REG, GT911_REG_ADDR_SIZE_BYTES, &touch_data, sizeof(touch_data));
         if (err != ESP_OK) {
             return TOUCH_PANEL_I2C_ERROR;
         }
@@ -99,7 +127,7 @@ touch_panel_err_t touch_get_coords(touch_panel_coords_t *coords) // TODO add mul
 
     /* Clear status register */
     status_reg = 0;
-    err = i2c_write(GT911_I2C_ADDRESS, GT911_TOUCH_STATUS_REG, GT911_REG_ADDR_SIZE_BYTES, &status_reg, sizeof(status_reg));
+    err = i2c_write(ctx.i2c_address, GT911_TOUCH_STATUS_REG, GT911_REG_ADDR_SIZE_BYTES, &status_reg, sizeof(status_reg));
     if (err != ESP_OK) {
         return TOUCH_PANEL_I2C_ERROR;
     }

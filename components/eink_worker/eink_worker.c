@@ -90,8 +90,8 @@ static void eink_worker_refresh_screen(void)
         ctx.fast_refresh_count = 0;
     }
     else {
-        ESP_LOGI(TAG, "Refreshing with A2");
-        eink_refresh_full(EINK_UPDATE_MODE_A2); // TODO maybe switch to DU
+        ESP_LOGI(TAG, "Refreshing with DU");
+        eink_refresh_full(EINK_UPDATE_MODE_DU);
         ctx.fast_refresh_count++;
     }
 }

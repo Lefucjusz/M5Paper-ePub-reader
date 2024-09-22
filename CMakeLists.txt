@@ -6,11 +6,12 @@ cmake_minimum_required(VERSION 3.5)
 
 set(EXTRA_COMPONENT_DIRS 
     components/bsp
+    components/drivers/fatfs_sd
+    components/drivers/sleep
+    components/eink_worker
     components/epub
-    components/fatfs_sd
     components/gui
     components/lvgl_task
-    components/sleep
     components/third_party
     components/utils
 )

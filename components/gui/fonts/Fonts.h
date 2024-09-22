@@ -1,10 +1,6 @@
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "lvgl.h"
+#include <lvgl.h>
 
 LV_FONT_DECLARE(gui_montserrat_medium_20)
 LV_FONT_DECLARE(gui_montserrat_medium_24)
@@ -22,7 +18,3 @@ LV_FONT_DECLARE(gui_montserrat_medium_44)
 #define GUI_SYMBOL_LONG_ARROW_LEFT          "\xEF\x8C\x8A" // 0xF30A
 #define GUI_SYMBOL_ARROW_CIRCLE_LEFT        "\xEF\x82\xA8" // 0xF0A8
 #define GUI_SYMBOL_ARROW_ALT_CIRCLE_LEFT    "\xEF\x8D\x99" // 0xF359
-
-#ifdef __cplusplus
-}
-#endif

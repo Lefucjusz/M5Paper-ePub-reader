@@ -160,3 +160,36 @@ esp_err_t i2c_write(uint8_t dev_addr, uint16_t reg_addr, i2c_reg_addr_size_t reg
     i2c_cmd_link_delete(cmd);
     return err;
 }
+
+esp_err_t i2c_check_presence(uint8_t dev_addr)
+{
+    /* Create handle */
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    if (cmd == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    
+    esp_err_t err;
+    do {
+        err = i2c_master_start(cmd);
+        if (err != ESP_OK) {
+            return err;
+        }
+        err = i2c_master_write_byte(cmd, I2C_MAKE_ADDR(dev_addr, I2C_MASTER_WRITE), I2C_ACK_CHECK_ENABLE);
+        if (err != ESP_OK) {
+            return err;
+        }
+        err = i2c_master_stop(cmd);
+        if (err != ESP_OK) {
+            return err;
+        }
+        err = i2c_master_cmd_begin(M5_I2C_PORT, cmd, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+        if (err != ESP_OK) {
+            break;
+        }
+    } while (0);
+    
+    /* Delete handle */
+    i2c_cmd_link_delete(cmd);
+    return err;
+}

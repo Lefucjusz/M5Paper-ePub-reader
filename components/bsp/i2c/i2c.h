@@ -26,6 +26,8 @@ esp_err_t i2c_deinit(void);
 esp_err_t i2c_read(uint8_t dev_addr, uint16_t reg_addr, i2c_reg_addr_size_t reg_addr_size, void *data, size_t size);
 esp_err_t i2c_write(uint8_t dev_addr, uint16_t reg_addr, i2c_reg_addr_size_t reg_addr_size, const void *data, size_t size);
 
+esp_err_t i2c_check_presence(uint8_t dev_addr);
+
 #ifdef __cplusplus
 }
 #endif
