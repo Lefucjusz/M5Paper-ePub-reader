@@ -4,13 +4,13 @@
 #include <esp_adc_cal.h>
 #include <soc/adc_channel.h>
 
-#define MILIVOLTS_TO_VOLTS(x) (x / 1000.0f)
+#define MILLIVOLTS_TO_VOLTS(x) ((x) / 1000.0f)
 
 #define BATTERY_ADC_UNIT ADC_UNIT_1
 #define BATTERY_ADC_CHANNEL ADC1_GPIO35_CHANNEL
 #define BATTERY_ADC_BIT_WIDTH ADC_WIDTH_BIT_12
 #define BATTERY_ADC_DEFAULT_VREF 1100
-#define BATTERY_ADC_ATTENUATION ADC_ATTEN_DB_11
+#define BATTERY_ADC_ATTENUATION ADC_ATTEN_DB_12
 
 /* Voltage from the battery is fed to ADC pin via a voltage divider. According to 
 M5Paper schematic, the values of the resistors used in the divider are 3k and 11k, 
@@ -69,6 +69,11 @@ uint8_t battery_get_percent(void)
         return 0;
     }
 
-    const float voltage_v = MILIVOLTS_TO_VOLTS(voltage_mv);
-    return roundf(2836.9625f * powf(voltage_v, 4) - 43987.4889f * powf(voltage_v, 3) + 255233.8134f * powf(voltage_v, 2) - 656689.7123f * voltage_v + 632041.7303f);
+    const float voltage_v = MILLIVOLTS_TO_VOLTS(voltage_mv);
+    const float a = 2836.9625f;
+    const float b = 43987.4889f;
+    const float c = 255233.8134f;
+    const float d = 656689.7123f;
+    const float e = 632041.7303f;
+    return roundf((a * powf(voltage_v, 4)) - (b * powf(voltage_v, 3)) + (c * powf(voltage_v, 2)) - (d * voltage_v) + e);
 }

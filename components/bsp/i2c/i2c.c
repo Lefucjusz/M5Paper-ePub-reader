@@ -1,4 +1,5 @@
 #include "i2c.h"
+#include <driver/i2c.h>
 #include <endian.h>
 
 #define I2C_MAKE_ADDR(addr, mode) (((addr) << 1) | (mode))

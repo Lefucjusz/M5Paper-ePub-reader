@@ -11,8 +11,8 @@ namespace gui::style
 
     namespace label
     {
-        inline constexpr auto offsetX = margins::verticalRight;
-        inline constexpr auto offsetY = 4;
+        inline constexpr auto offsetX = 0;
+        inline constexpr auto offsetY = 2;
     }
 
     namespace icon

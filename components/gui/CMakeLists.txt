@@ -3,8 +3,9 @@ idf_component_register(
         "Gui.cpp"
         "toc_list/TocListView.cpp"
         "status_bar/StatusBar.cpp"
+        "status_bar/StatusBarCWrapper.cpp"
         # "./popups/gui_set_time_popup.c"
-        "./popups/PopupUnsupported.cpp"
+        "popups/PopupUnsupported.cpp"
         "page/PageView.cpp"
         "files_list/FilesListView.cpp"
         

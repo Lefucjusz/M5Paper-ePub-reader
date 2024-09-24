@@ -9,11 +9,8 @@
 #include <esp_log.h>
 
 /* TODO: 
- * - reimplement remaining GUI elements
- * - implement or delete clock
+ * - implement clock setting
  * - implement powering off
- * - fix compilation warnings (battery, lvgl)
- * - update I2C driver
  * - add "loading" popup
  */
 

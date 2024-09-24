@@ -6,8 +6,7 @@ cmake_minimum_required(VERSION 3.5)
 
 set(EXTRA_COMPONENT_DIRS 
     components/bsp
-    components/drivers/fatfs_sd
-    components/drivers/sleep
+    components/drivers
     components/eink_worker
     components/epub
     components/gui
@@ -15,6 +14,9 @@ set(EXTRA_COMPONENT_DIRS
     components/third_party
     components/utils
 )
+
+# Suppress enum bit operation warning from lv_obj_style.h
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(M5Paper-LVGL)

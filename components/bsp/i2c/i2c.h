@@ -5,7 +5,6 @@ extern "C" {
 #endif
 
 #include <esp_err.h>
-#include <driver/i2c.h>
 
 #define M5_I2C_PORT 0
 #define M5_SDA_PIN 21

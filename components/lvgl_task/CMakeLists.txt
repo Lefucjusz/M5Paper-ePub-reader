@@ -14,4 +14,6 @@ idf_component_register(
         sleep
         utils
         eink_worker
+        gui
+        real_time_clock
 )

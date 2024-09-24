@@ -108,6 +108,7 @@
         "filesystem": "cpp",
         "lvgl.h": "c",
         "eink.h": "c",
-        "queue.h": "c"
+        "queue.h": "c",
+        "i2c_master.h": "c"
     }
 }

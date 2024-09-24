@@ -18,7 +18,6 @@ namespace gui
         lv_obj_t *clockLabel;
         lv_obj_t *batteryIcon;
         lv_obj_t *batteryLabel;
-        // lv_timer_t *update_timer;
 
         auto setBatteryIcon(std::uint8_t batteryPercent) -> void
         {
@@ -91,7 +90,8 @@ namespace gui
 
         /* Refresh battery level */
         const auto batteryLevel = battery_get_percent();
-        snprintf(buffer, sizeof(buffer), "%d%%", batteryLevel);
+        const auto batteryVoltage = battery_get_voltage_filtered();
+        snprintf(buffer, sizeof(buffer), "%d%% (%01.2fV)", batteryLevel, batteryVoltage / 1000.0f);
         lv_label_set_text(batteryLabel, buffer);
         setBatteryIcon(batteryLevel);
     }

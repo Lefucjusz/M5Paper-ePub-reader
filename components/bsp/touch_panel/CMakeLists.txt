@@ -10,4 +10,5 @@ idf_component_register(
                 
     PRIV_REQUIRES 
         utils
+        driver
 )

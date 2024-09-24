@@ -1,9 +1,11 @@
 #include "lvgl_task.h"
+#include <StatusBarCWrapper.h>
 #include <lvgl.h>
 #include <utils.h>
 #include <sleep.h>
 #include <eink_worker.h>
 #include <touch_panel.h>
+#include <real_time_clock.h>
 #include <esp_log.h>
 #include <esp_timer.h>
 #include <esp_check.h>
@@ -35,6 +37,7 @@ static eink_err_t lvgl_display_init(void);
 static touch_panel_err_t lvgl_touch_init(void);
 static esp_err_t lvgl_tick_timer_init(void);
 
+static uint64_t lvgl_get_sleep_timer_value_us(void);
 static void lvgl_enter_sleep_mode(void);
 static void lvgl_leave_sleep_mode(void);
 
@@ -176,6 +179,19 @@ static esp_err_t lvgl_tick_timer_init(void)
     return ESP_OK;
 }
 
+static uint64_t lvgl_get_sleep_timer_value_us(void)
+{
+    struct tm time;
+    const real_time_clock_err_t err = real_time_clock_get_time(&time);
+    if (err) {
+        ESP_LOGE(TAG, "Failed to get RTC time, error: %d", err);
+        return 0;
+    }
+
+    /* Time to full minute in microseconds */
+    return (60 - time.tm_sec) * 1000ULL * 1000ULL;
+}
+
 static void lvgl_enter_sleep_mode(void)
 {
     const eink_err_t eink_err = eink_sleep();
@@ -184,7 +200,12 @@ static void lvgl_enter_sleep_mode(void)
         return;
     }
 
-    esp_err_t esp_err = esp_timer_stop(ctx.tick_timer);
+    esp_err_t esp_err = sleep_timer_init(lvgl_get_sleep_timer_value_us());
+    if (esp_err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to init sleep timer, error %d", esp_err);
+    }
+
+    esp_err = esp_timer_stop(ctx.tick_timer);
     if (esp_err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to stop tick timer, error %d", esp_err);
     }
@@ -209,6 +230,8 @@ static void lvgl_leave_sleep_mode(void)
         return;
     }
 
+    statusBarUpdate();
+
     lv_tick_inc(LV_DISP_DEF_REFR_PERIOD);
     lv_task_handler();
 }
@@ -216,7 +239,7 @@ static void lvgl_leave_sleep_mode(void)
 static void lvgl_task(void *arg)
 {
     /* Init sleep mode handler */
-    sleep_init();
+    sleep_gpio_init();
 
     /* Main loop */
     while (1) {

@@ -1,7 +1,7 @@
 #include "Epub.hpp"
 #include "EpubConstants.hpp"
-#include "UniqueMptr.hpp"
-#include <pugixml.hpp>
+#include <UniqueMptr.hpp>
+#include <pugixml/pugixml.hpp>
 #include <esp_log.h>
 #include <map>
 #include <algorithm>

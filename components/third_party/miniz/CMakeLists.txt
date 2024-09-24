@@ -8,3 +8,6 @@ idf_component_register(
     INCLUDE_DIRS 
         "."
 )
+
+# Suppress type limits warning
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-type-limits)

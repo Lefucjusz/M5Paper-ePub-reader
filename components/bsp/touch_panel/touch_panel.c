@@ -1,6 +1,7 @@
 #include "touch_panel.h"
 #include "GT911.h"
 #include <utils.h>
+#include <driver/gpio.h>
 #include <esp_log.h>
 
 #define TAG __FILENAME__
