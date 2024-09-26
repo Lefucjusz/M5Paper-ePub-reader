@@ -1,7 +1,5 @@
 #include "HtmlEntities.hpp"
 
-#include <iostream>
-
 auto HtmlEntities::substitute(const std::string &input) -> std::string
 {
     std::string output;
@@ -43,7 +41,7 @@ auto HtmlEntities::findEntityLength(const std::string &input, std::size_t offset
         }
 
         /* Index found, return its length */
-        if (input[index] == ';') {
+        if (input[index] == entityEndMarker) {
             return (index - offset) + 1;
         }
 
