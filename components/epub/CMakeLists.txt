@@ -2,6 +2,7 @@ idf_component_register(
     SRCS
         Epub.cpp
         EpubSection.cpp
+        HtmlEntities.cpp
 
     INCLUDE_DIRS 
         "."

@@ -39,7 +39,13 @@ auto EpubSectionWalker::on_leave(pugi::xml_node &node) -> bool
     }
 
     if (isHeading(node) || isBlock(node)) {
+        /* Remove newlines */
         std::replace(currentBlockText.begin(), currentBlockText.end(), '\n', ' ');
+
+        /* Substitute HTML entities */
+        currentBlockText = htmlEntities.substitute(currentBlockText);
+
+        /* Push new block */
         blocks.emplace_back(currentBlockText, fontStack.back());
         currentBlockText.clear();
         fontStack.pop_back();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TextBlock.hpp"
+#include "HtmlEntities.hpp"
 #include <pugixml/pugixml.hpp>
 #include <string>
 #include <vector>
@@ -23,6 +24,7 @@ class EpubSectionWalker : public pugi::xml_tree_walker
         TextBlocks blocks;
         std::string currentBlockText;
         std::vector<Font> fontStack;
+        HtmlEntities htmlEntities;
 
         [[nodiscard]] auto isHeading(const pugi::xml_node &node) const -> bool;
         [[nodiscard]] auto isBlock(const pugi::xml_node &node) const -> bool;
