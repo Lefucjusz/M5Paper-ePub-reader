@@ -314,6 +314,7 @@ namespace gui
                 ESP_LOGE(TAG, "Exception for section@%zu: '%s'", spineIndex, e.what());
                 return;
             }
+
             ESP_LOGI(TAG, "Rendering started...");
             auto start = lv_tick_get();
             renderSection(section);

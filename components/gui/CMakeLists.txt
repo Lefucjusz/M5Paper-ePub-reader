@@ -5,7 +5,7 @@ idf_component_register(
         "status_bar/StatusBar.cpp"
         "status_bar/StatusBarCWrapper.cpp"
         # "./popups/gui_set_time_popup.c"
-        "popups/PopupUnsupported.cpp"
+        "popups/ErrorPopup.cpp"
         "page/PageView.cpp"
         "files_list/FilesListView.cpp"
         

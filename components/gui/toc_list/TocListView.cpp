@@ -1,6 +1,7 @@
 #include "TocListView.hpp"
 #include "style/Style.hpp"
 #include "PageView.hpp"
+#include "ErrorPopup.hpp"
 #include "Fonts.h"
 #include <Epub.hpp>
 #include <lvgl.h>
@@ -27,8 +28,14 @@ namespace gui
             ESP_LOGI(TAG, "Entry title: %s", entry->title.c_str());
             ESP_LOGI(TAG, "Entry href: %s", entry->contentPath.c_str());
             ESP_LOGI(TAG, "Entry spine index: %zu", spineIndex);
-        
-            pageViewCreate(currentEpub.get(), spineIndex);
+
+            if (currentEpub->getSection(entry->contentPath).getBlocks().empty()) {
+                ESP_LOGW(TAG, "Selected section is empty!");
+                createErrorPopup("Section '" + entry->title + "' is not renderable or empty!");
+            }
+            else {
+                pageViewCreate(currentEpub.get(), spineIndex);
+            }
         }
 
         auto backButtonClickCallback(lv_event_t *event) -> void

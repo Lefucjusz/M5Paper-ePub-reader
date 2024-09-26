@@ -1,7 +1,7 @@
 #include "FilesListView.hpp"
 #include "style/Style.hpp"
 #include "DirectoryIterator.hpp"
-#include "PopupUnsupported.hpp"
+#include "ErrorPopup.hpp"
 #include "TocListView.hpp"
 #include "Fonts.h"
 #include <lvgl.h>
@@ -57,8 +57,7 @@ namespace gui
         auto unsupportedFileClickCallback(lv_event_t *event) -> void
         {
             const auto entryIndex = reinterpret_cast<std::size_t>(lv_event_get_user_data(event));
-            const auto &filename = currentEntries[entryIndex];
-            createPopupUnsupported(filename);
+            createErrorPopup("File '" + currentEntries[entryIndex].string() + "' has unsupported format!");
         }
 
         auto reloadList() -> void
@@ -68,11 +67,11 @@ namespace gui
 
             /* Create directory up button */
             if (!isCurrentPathRoot()) {
-                auto up_button = lv_list_add_btn(filesList, LV_SYMBOL_DIRECTORY, "..");
-                lv_obj_set_style_text_font(up_button, &gui_montserrat_medium_36, LV_PART_MAIN);
-                lv_obj_set_style_pad_top(up_button, style::button::padTop, LV_PART_MAIN);
-                lv_obj_set_style_pad_bottom(up_button, style::button::padBottom, LV_PART_MAIN);
-                lv_obj_add_event_cb(up_button, upClickCallback, LV_EVENT_CLICKED, nullptr);
+                auto upButton = lv_list_add_btn(filesList, LV_SYMBOL_DIRECTORY, "..");
+                lv_obj_set_style_text_font(upButton, &gui_montserrat_medium_36, LV_PART_MAIN);
+                lv_obj_set_style_pad_top(upButton, style::button::padTop, LV_PART_MAIN);
+                lv_obj_set_style_pad_bottom(upButton, style::button::padBottom, LV_PART_MAIN);
+                lv_obj_add_event_cb(upButton, upClickCallback, LV_EVENT_CLICKED, nullptr);
             }
 
             /* Create new entries */
