@@ -61,7 +61,7 @@ void lvgl_task_init(void)
 
 void lvgl_task_start(void)
 {
-    xTaskCreatePinnedToCore(lvgl_task, LVGL_TASK_NAME, LVGL_TASK_STACK_SIZE / sizeof(StackType_t), NULL, 0, NULL, LVGL_TASK_CORE_AFFINITY);
+    xTaskCreatePinnedToCore(lvgl_task, LVGL_TASK_NAME, LVGL_TASK_STACK_SIZE / sizeof(StackType_t), NULL, LVGL_TASK_PRIORITY, NULL, LVGL_TASK_CORE_AFFINITY);
 }
 
 /* Private functions */

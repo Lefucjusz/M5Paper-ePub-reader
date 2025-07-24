@@ -8,6 +8,7 @@ extern "C" {
 #include <stdbool.h>
 
 #define LVGL_TASK_STACK_SIZE (1024 * 14) // bytes
+#define LVGL_TASK_PRIORITY 4
 #define LVGL_TASK_CORE_AFFINITY 0
 #define LVGL_TASK_NAME "lvgl_task"
 

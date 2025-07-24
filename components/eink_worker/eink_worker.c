@@ -45,7 +45,7 @@ eink_err_t eink_worker_start(void (*on_ready)(void))
         return EINK_NO_MEMORY;
     }
 
-    xTaskCreatePinnedToCore(eink_worker, EINK_WORKER_NAME, EINK_WORKER_STACK_SIZE / sizeof(StackType_t), NULL, 0, NULL, EINK_WORKER_CORE_AFFINITY);
+    xTaskCreatePinnedToCore(eink_worker, EINK_WORKER_NAME, EINK_WORKER_STACK_SIZE / sizeof(StackType_t), NULL, EINK_WORKER_PRIORITY, NULL, EINK_WORKER_CORE_AFFINITY);
     return EINK_OK;
 }
 

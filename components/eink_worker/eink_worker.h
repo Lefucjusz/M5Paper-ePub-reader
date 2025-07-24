@@ -8,6 +8,7 @@ extern "C" {
 #include <lvgl.h>
 
 #define EINK_WORKER_STACK_SIZE (1024 * 2) // bytes
+#define EINK_WORKER_PRIORITY 4
 #define EINK_WORKER_CORE_AFFINITY 1
 #define EINK_WORKER_NAME "eink_worker"
 
